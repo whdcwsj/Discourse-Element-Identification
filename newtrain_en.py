@@ -21,7 +21,7 @@ plt.switch_backend('Agg')
 
 currenttime = time.localtime()
 
-model_package_name = 'baseline0.67_drop0.1'
+model_package_name = 'baseline0.67_drop0.1_3'
 
 def list2tensor(x, y, ft, p_embd, device='cpu'):
     inputs = torch.tensor(x, dtype=torch.long, device=device)
@@ -309,6 +309,6 @@ if __name__ == "__main__":
     # 在与Stab和Gurevych（2017）进行比较时， class_n为3：Main Claim(主要声明)，Claim(声明)，Premise(前提)
     train(tag_model, pad_documents, pad_labels, features, is_gpu, epoch_n=1500, lr=0.1, batch_n=batch_n, title=title, embeddings=embeddings, class_n=class_n)
     endtime = datetime.datetime.now()
-    print("本次训练耗时：")
+    print("本次seed为%d的训练耗时：" % int(args.seed_num))
     print(endtime - starttime)
 

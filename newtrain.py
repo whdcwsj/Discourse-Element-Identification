@@ -23,7 +23,7 @@ plt.switch_backend('Agg')
 
 currenttime = time.localtime()
 
-model_package_name = 'baseline0.6_drop0.1'
+model_package_name = 'baseline0.6_drop0.1_3'
 
 
 # 固定随机数种子
@@ -344,5 +344,5 @@ if __name__ == "__main__":
     train(tag_model, pad_documents, pad_labels, features, is_gpu, epoch_n=700, lr=0.2, batch_n=batch_n, title=title,
           is_mask=is_mask)
     endtime = datetime.datetime.now()
-    print("本次训练耗时：")
+    print("本次seed为%d的训练耗时：" % int(args.seed_num))
     print(endtime - starttime)

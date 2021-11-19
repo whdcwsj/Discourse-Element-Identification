@@ -193,6 +193,7 @@ class STWithRSbySPP(nn.Module):
         roleFt = self.rfLayer(tag_out)  # roleFt:(batch_n, doc_l, 15)
 
         tag_out = torch.cat((tag_out, sentFt, roleFt), dim=2)  # tag_out: (batch_n, doc_l, sent_dim*2+30)  (1,8,286)
+        tag_out = self.dropout(tag_out)
 
         # class_n用在了这里
         result = self.classifier(tag_out)  # tag_out: (batch_n, doc_l, class_n)
@@ -217,9 +218,9 @@ class STWithRSbySPP(nn.Module):
             name += '_' + self.p_embd
         return name
 
-    # 多了ft_size
 
 
+# 多了ft_size
 # sentence+额外的feature
 class STWithRSbySPPWithFt2(nn.Module):
     def __init__(self, word_dim, hidden_dim, sent_dim, class_n, p_embd=None, pos_dim=0, p_embd_dim=16, ft_size=0,
@@ -235,6 +236,7 @@ class STWithRSbySPPWithFt2(nn.Module):
         self.ft_size = ft_size
         self.pool_type = pool_type
 
+        self.dropout = nn.Dropout(0.1)
         self.sentLayer = nn.LSTM(self.word_dim, self.hidden_dim, bidirectional=True)
         self.classifier = nn.Linear(self.sent_dim * 2 + 30, self.class_n)
 
@@ -267,6 +269,7 @@ class STWithRSbySPPWithFt2(nn.Module):
                                                                          1)  # documents: (sen_l, batch_n*doc_l, word_dim)
 
         sent_out, _ = self.sentLayer(documents, self.sent_hidden)  # sent_out: (sen_l, batch_n*doc_l, hidden_dim*2)
+        sent_out = self.dropout(sent_out)
 
         if mask is None:
             sentpres = torch.tanh(torch.mean(sent_out, dim=0))  # sentpres: (batch_n*doc_l, hidden_dim*2)
@@ -286,12 +289,16 @@ class STWithRSbySPPWithFt2(nn.Module):
         sentpres = sentpres.transpose(0, 1)
 
         tag_out, _ = self.tagLayer(sentpres, self.tag_hidden)  # tag_out: (doc_l, batch_n, sent_dim*2)
+        tag_out = self.dropout(tag_out)
+
         tag_out = torch.tanh(tag_out)
 
         tag_out = tag_out.transpose(0, 1)
         roleFt = self.rfLayer(tag_out)
 
         tag_out = torch.cat((tag_out, sentFt, roleFt), dim=2)
+        # tag_out = self.dropout(tag_out)
+
         result = self.classifier(tag_out)
 
         result = F.log_softmax(result, dim=2)  # result: (batch_n, doc_l, class_n)

@@ -273,6 +273,6 @@ if __name__ == "__main__":
     train(tag_model, pad_documents, pad_labels, n_features, is_gpu, epoch_n=1500, lr=0.1, batch_n=batch_n, title=title,
           embeddings=embeddings)
     endtime = datetime.datetime.now()
-    print("本次训练耗时：")
+    print("本次seed为%d的训练耗时：" % int(args.seed_num))
     print(endtime - starttime)
 
