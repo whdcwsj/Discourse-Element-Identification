@@ -1,6 +1,16 @@
 # Default ignored files
 /shelf/
 /workspace.xml
+/embd/
+/log/
+/model/
+/newlog/
+/newmodel/
+/newvalue/
+/value/
+
+
+
 # Datasource local storage ignored files
 /dataSources/
 /dataSources.local.xml
