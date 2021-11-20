@@ -3,7 +3,7 @@ import os
 
 from transformers import BertTokenizer
 # import config
-from model import STWithRSbySPPWithFt2
+from model import *
 import utils_e as utils
 
 import numpy as np
@@ -22,7 +22,7 @@ plt.switch_backend('Agg')
 
 currenttime = time.localtime()
 
-model_package_name = 'baseline0.77_drop0.1'
+model_package_name = 'baseline0.77_gru'
 
 
 def list2tensor(x, y, ft, p_embd, device='cpu'):
@@ -251,7 +251,7 @@ if __name__ == "__main__":
     # embeddings.weight.requires_grad = True
 
     # tag_model = torch.load('./model/STE_model_128_128_last.pk')
-    tag_model = STWithRSbySPPWithFt2(embeddings.embedding_dim, hidden_dim, sent_dim, class_n, p_embd=p_embd,
+    tag_model = STWithRSbySPPWithFt2_GRU(embeddings.embedding_dim, hidden_dim, sent_dim, class_n, p_embd=p_embd,
                                      p_embd_dim=p_embd_dim, ft_size=ft_size)
 
     # 创建三个文件名

@@ -86,7 +86,7 @@ import torch
 # print(c)
 # print(c.shape)
 
-import pickle
+# import pickle
 
 # embeddings = torch.load('./embd/bert-base-uncased-word_embeddings.pkl')
 # print(embeddings.embedding_dim)
@@ -108,4 +108,18 @@ import pickle
 
 # [101, 1045, 2033, 2026, 3067, 2870, 102]
 
-print(torch.cuda.is_available())
+
+import torch
+# print(torch.arange(0., 100).shape)
+# position = torch.arange(0., 100).unsqueeze(1)
+# print(position.shape)
+# # print(position)
+# pe = torch.zeros(100,16)
+# print(pe.shape)
+# print(pe[:, 0::2].shape)
+# print(pe[:, 0::2])
+
+wang = torch.zeros(100, 16, 3)
+print(wang.shape)
+si = wang[ : , : , 0]
+print(si.shape)

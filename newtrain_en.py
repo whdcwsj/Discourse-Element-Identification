@@ -21,7 +21,7 @@ plt.switch_backend('Agg')
 
 currenttime = time.localtime()
 
-model_package_name = 'baseline0.67_drop0.1_3'
+model_package_name = 'baseline0.67_gru'
 
 def list2tensor(x, y, ft, p_embd, device='cpu'):
     inputs = torch.tensor(x, dtype=torch.long, device=device)
@@ -285,7 +285,7 @@ if __name__ == "__main__":
     # tag_model = STWithRSbySPP(embeddings.embedding_dim, hidden_dim, sent_dim, class_n=5, p_embd=p_embd,
     #                           p_embd_dim=p_embd_dim, pool_type='max_pool')
 
-    tag_model = STWithRSbySPP(embeddings.embedding_dim, hidden_dim, sent_dim, class_n=5, p_embd=p_embd,
+    tag_model = EnSTWithRSbySPP_GRU(embeddings.embedding_dim, hidden_dim, sent_dim, class_n=5, p_embd=p_embd,
                               p_embd_dim=p_embd_dim, pool_type='max_pool')
 
     # 创建三个文件名

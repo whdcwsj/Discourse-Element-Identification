@@ -23,7 +23,7 @@ plt.switch_backend('Agg')
 
 currenttime = time.localtime()
 
-model_package_name = 'baseline0.6_drop0.1_3'
+model_package_name = 'baseline0.6_drop0.1_2_SPP2'
 
 
 # 固定随机数种子

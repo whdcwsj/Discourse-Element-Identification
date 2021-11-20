@@ -9,26 +9,45 @@ import utils
 import math
 import copy
 
+# 代码：https://blog.csdn.net/nocml/article/details/110920221
+# transformer中的Positional Embedding位置编码
+# 对于每个位置的PE是固定的，不会因为输入的句子不同而不同，且每个位置的PE大小为1∗n(n为word embedding的dim_size)
+# transformer中使用正余弦波来计算PE
+
+# if p_embd in ['embd_b', 'embd_c']:
+#     p_embd_dim = hidden_dim * 2 =128
+
 class PositionalEncoding(nn.Module):
+    # p_embd_dim=128, 100
     def __init__(self, d_model, max_len=5000):
         super(PositionalEncoding, self).__init__()
         
-        pe = torch.zeros(max_len, d_model)
-        position = torch.arange(0., max_len).unsqueeze(1)
+        pe = torch.zeros(max_len, d_model)  # pe:torch.Size([100, 16])
+        # unsqueeze()这个函数主要是对数据维度进行扩充
+        position = torch.arange(0., max_len).unsqueeze(1)  # position:torch.Size([max_len, 1])
         div_term = torch.exp(torch.arange(0., d_model, 2) * -(math.log(10000.0) / d_model))
+        # seq[start:end:step]
+        # range(10)[::2]
+        # [0, 2, 4, 6, 8]
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
+
+        # 模型中需要保存下来的参数包括两种:
+        # 一种是反向传播需要被optimizer更新的，称之为parameter
+        # 一种是反向传播不需要被optimizer更新，称之为buffer
         self.register_buffer('pe', pe)
-        
+
+    # (batch_n,doc_l,3)
     def forward(self, pos):
-        gp_embds = Variable(self.pe[pos[:, :, 0]], requires_grad=False)
+        # 把不需要更新参数的设置 requires_grad=False
+        gp_embds = Variable(self.pe[pos[:, :, 0]], requires_grad=False)   # shape:(batch_n,doc_l,p_embd_dim)
         lp_embds = Variable(self.pe[pos[:, :, 1]], requires_grad=False)
         pp_embds = Variable(self.pe[pos[:, :, 2]], requires_grad=False)
         return gp_embds, lp_embds, pp_embds
 
 # 位置编码层
 # 中文数据集：p_embd='add'，p_embd_dim=16
-# 英文数据集：p_embd = None
+# 英文数据集：p_embd = None，p_embd_dim=16
 class PositionLayer(nn.Module):
     def __init__(self, p_embd=None, p_embd_dim=16, zero_weight=False):
         super(PositionLayer, self).__init__()
@@ -41,6 +60,9 @@ class PositionLayer(nn.Module):
             self.pWeight = nn.Parameter(torch.ones(3))
         
         if p_embd == 'embd':
+            # 第一个参数num_embedding词典的大小尺寸：，第二个参数embedding_dim：嵌入向量的维度
+            # 输入： LongTensor (N, W), N = mini-batch, W = 每个mini-batch中提取的下标数
+            # 输出： (N, W, embedding_dim)
             self.g_embeddings = nn.Embedding(41, p_embd_dim)
             self.l_embeddings = nn.Embedding(21, p_embd_dim)
             self.p_embeddings = nn.Embedding(11, p_embd_dim)
@@ -51,27 +73,39 @@ class PositionLayer(nn.Module):
             self.gp_Linear = nn.Linear(p_embd_dim, 1)
             self.lp_Linear = nn.Linear(p_embd_dim, 1)
             self.pp_Linear = nn.Linear(p_embd_dim, 1)
+
+        # if p_embd in ['embd_b', 'embd_c']:
+        #     p_embd_dim = hidden_dim * 2 =128
+        # 与'embd'相比较，p_embd_dim从16变换为128
         elif p_embd == 'embd_b':
             self.g_embeddings = nn.Embedding(41, p_embd_dim)
             self.l_embeddings = nn.Embedding(21, p_embd_dim)
             self.p_embeddings = nn.Embedding(11, p_embd_dim)
+        # Transformer的位置编码方法
         elif p_embd == 'embd_c':
             self.pe = PositionalEncoding(p_embd_dim, 100)
 
-    # sentpres: (batch_n, doc_l, hidden_dim*2)，pos: (batch_n,doc_l,6)
+    # sentpres: (batch_n, doc_l, hidden_dim*2)
+    # pos: (batch_n,doc_l,6)
     # ['gpos', 'lpos', 'ppos', 'gid', 'lid', 'pid']
     def forward(self, sentpres, pos):
         # sentpres: (batch_n, doc_l, output_dim*2)
+        # embd_name = ['embd', 'embd_a', 'embd_b', 'embd_c']
         if self.p_embd in utils.embd_name:
             pos = pos[:, :, 3:6].long()
         # 取前三个标签：['gpos', 'lpos', 'ppos']
         else:
             pos = pos[:, :, :3]
+
+        # 这几个处理的是绝对位置
+        # 后面三个直接torch.cat()
         if self.p_embd == 'embd':
-            gp_embds = torch.tanh(self.g_embeddings(pos[:, :, 0]))
+            # pos[:, :, 0]  shape:(batch_n, doc_l)
+            gp_embds = torch.tanh(self.g_embeddings(pos[:, :, 0]))   # shape:(batch_n, doc_l, p_embd_dim)
             lp_embds = torch.tanh(self.l_embeddings(pos[:, :, 1]))
             pp_embds = torch.tanh(self.p_embeddings(pos[:, :, 2]))
             sentpres = torch.cat((sentpres, gp_embds, lp_embds, pp_embds), dim=2)
+        # 后面三个先MLP，再加和
         elif self.p_embd == 'embd_a':
             gp_embds = self.g_embeddings(pos[:, :, 0])
             lp_embds = self.l_embeddings(pos[:, :, 1])
@@ -79,6 +113,7 @@ class PositionLayer(nn.Module):
             sentpres = sentpres + self.pWeight[0] * torch.tanh(self.gp_Linear(gp_embds)) + \
                                   self.pWeight[1] * torch.tanh(self.lp_Linear(lp_embds)) + \
                                   self.pWeight[2] * torch.tanh(self.pp_Linear(pp_embds))
+        # 后面三个先tanh，再加和
         elif self.p_embd == 'embd_b':
             gp_embds = self.g_embeddings(pos[:, :, 0])
             lp_embds = self.l_embeddings(pos[:, :, 1])
@@ -86,27 +121,37 @@ class PositionLayer(nn.Module):
             sentpres = sentpres + self.pWeight[0] * torch.tanh(gp_embds) + \
                                   self.pWeight[1] * torch.tanh(lp_embds) + \
                                   self.pWeight[2] * torch.tanh(pp_embds)
+
+        # 采用transformer中的位置编码
         elif self.p_embd == 'embd_c':
             gp_embds, lp_embds, pp_embds = self.pe(pos)
             sentpres = sentpres + self.pWeight[0] * gp_embds + \
                                   self.pWeight[1] * lp_embds + \
                                   self.pWeight[2] * pp_embds                   
+
+        # 下面处理的是相对位置
         elif self.p_embd == 'cat':
             sentpres = torch.cat((sentpres, pos), dim=2)
         # 在zero_weight为False的情况下，pWeight初始化为1
         # 将前三个pos的数值1：1：1与sentence相加
         elif self.p_embd =='add':
             sentpres = sentpres + self.pWeight[0] * pos[:, :, :1] + self.pWeight[1] * pos[:, :, 1:2] + self.pWeight[2] * pos[:, :, 2:3]
+        # 跳过第一个相对位置
         elif self.p_embd =='add1':
             sentpres = sentpres + self.pWeight[1] * pos[:, :, 1:2] + self.pWeight[2] * pos[:, :, 2:3]
+        # 跳过第二个相对位置
         elif self.p_embd =='add2':
             sentpres = sentpres + self.pWeight[0] * pos[:, :, :1] + self.pWeight[2] * pos[:, :, 2:3]
+        # 跳过第三个相对位置
         elif self.p_embd =='add3':
             sentpres = sentpres + self.pWeight[0] * pos[:, :, :1] + self.pWeight[1] * pos[:, :, 1:2]
+        # 只留第一个相对位置
         elif self.p_embd =='addg':
             sentpres = sentpres + self.pWeight[0] * pos[:, :, :1]
+        # 只留第二个相对位置
         elif self.p_embd =='addl':
             sentpres = sentpres + self.pWeight[1] * pos[:, :, 1:2]
+        # 只留第三个相对位置
         elif self.p_embd =='addp':
             sentpres = sentpres + self.pWeight[2] * pos[:, :, 2:3]
             
