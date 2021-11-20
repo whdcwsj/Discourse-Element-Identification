@@ -173,7 +173,7 @@ def Chinese_test(model_dir, seed):
 
     is_mask = False
 
-    from train import test
+    from newtrain import test
     w_file = './newvalue/cn/' + model_package + '/%s_seed_%d.csv' % (in_file.split('.')[1].split('/')[-1], seed)
 
     temp_accurancy, temp_macro_f1 = test_all(test, model_dir, w_file, (pad_documents, pad_labels, features), title, is_mask=is_mask)
@@ -290,7 +290,7 @@ def English_test(model_dir, seed):
     en_documents, en_labels, features = utils.getEnglishSamplesBertId(in_file, tokenizer, title=title, is_word=is_word)
     pad_documents, pad_labels = utils.sentencePaddingId(en_documents, en_labels, max_len)
 
-    from train_e import test
+    from newtrain_en import test
     w_file = './newvalue/en/' + model_package + '/%s_seed_%d.csv' % (in_file.split('.')[1].split('/')[-1], seed)
     ignore = []
 
@@ -347,7 +347,8 @@ def English_test_ft(model_dir, seed):
 
     embeddings = torch.load('./embd/bert-base-uncased-word_embeddings.pkl')
 
-    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+    BERT_PATH = '/home/wsj/bert_model/bert-base-uncased'
+    tokenizer = BertTokenizer.from_pretrained(BERT_PATH)
 
     en_documents, en_labels, features = utils.getEnglishSamplesBertId(in_file, tokenizer, title=title, is_word=is_word)
     pad_documents, pad_labels = utils.sentencePaddingId(en_documents, en_labels, max_len)
@@ -355,7 +356,7 @@ def English_test_ft(model_dir, seed):
     n_features = utils.featuresExtend(features, en_documents, en_labels, tokenizer)
     print(len(n_features[0][0]))
 
-    from train_ef import test
+    from newtrain_en_ft import test
     w_file = './newvalue/enft/' + model_package + '/%s_seed_%d.csv' % (in_file.split('.')[1].split('/')[-1], seed)
 
     temp_accurancy, temp_macro_f1 = test_all_e(test, model_dir, w_file, (pad_documents, pad_labels, n_features), title, embeddings=embeddings)
