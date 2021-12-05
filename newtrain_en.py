@@ -4,6 +4,8 @@ import logging
 
 from transformers import BertTokenizer
 from model import *
+from model_gru import *
+from model_gate import *
 import utils_e as utils
 
 import numpy as np
@@ -21,7 +23,7 @@ plt.switch_backend('Agg')
 
 currenttime = time.localtime()
 
-model_package_name = 'baseline0.67_gru'
+model_package_name = 'new_baseline0.67_gate2'
 
 def list2tensor(x, y, ft, p_embd, device='cpu'):
     inputs = torch.tensor(x, dtype=torch.long, device=device)
@@ -282,10 +284,14 @@ if __name__ == "__main__":
     # embeddings.embedding_dim：768
     # Main Claim(主要声明)，Claim(声明)，Premise(前提)，Other，Padding
     # 声明模型的MLP的class_n=5
+
     # tag_model = STWithRSbySPP(embeddings.embedding_dim, hidden_dim, sent_dim, class_n=5, p_embd=p_embd,
     #                           p_embd_dim=p_embd_dim, pool_type='max_pool')
 
-    tag_model = EnSTWithRSbySPP_GRU(embeddings.embedding_dim, hidden_dim, sent_dim, class_n=5, p_embd=p_embd,
+    # tag_model = EnSTWithRSbySPP_GRU(embeddings.embedding_dim, hidden_dim, sent_dim, class_n=5, p_embd=p_embd,
+    #                           p_embd_dim=p_embd_dim, pool_type='max_pool')
+
+    tag_model = EnSTWithRSbySPP_GATE(embeddings.embedding_dim, hidden_dim, sent_dim, class_n=5, p_embd=p_embd,
                               p_embd_dim=p_embd_dim, pool_type='max_pool')
 
     # 创建三个文件名

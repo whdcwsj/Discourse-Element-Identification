@@ -4,6 +4,7 @@ import os
 from transformers import BertTokenizer
 # import config
 from model import *
+from model_gru import *
 import utils_e as utils
 
 import numpy as np
@@ -22,7 +23,7 @@ plt.switch_backend('Agg')
 
 currenttime = time.localtime()
 
-model_package_name = 'baseline0.77_gru'
+model_package_name = 'new_baseline0.77_gate2'
 
 
 def list2tensor(x, y, ft, p_embd, device='cpu'):
@@ -227,6 +228,7 @@ if __name__ == "__main__":
 
     pad_documents, pad_labels = utils.sentencePaddingId(en_documents, en_labels, max_len)
 
+    # 处理新增的手工特征
     n_features = utils.featuresExtend(features, en_documents, en_labels, tokenizer)
     ft_size = len(n_features[0][0]) - 7
 

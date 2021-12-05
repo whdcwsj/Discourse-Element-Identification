@@ -110,10 +110,12 @@ class STWithRSbySPP(nn.Module):
         self.p_embd_dim = p_embd_dim
         self.pool_type = pool_type
 
-        self.dropout = nn.Dropout(0.1)
+        # self.dropout = nn.Dropout(0.1)
         self.sentLayer = nn.LSTM(self.word_dim, self.hidden_dim, bidirectional=True)
         # 为什么sent_dim*2+30？？？因为要接两个句间注意力
         self.classifier = nn.Linear(self.sent_dim * 2 + 30, self.class_n)
+
+        # 配合avg与max加和时进行使用
         # self.classifier = nn.Linear(self.sent_dim * 2 + 60, self.class_n)
 
         self.posLayer = PositionLayer(p_embd, p_embd_dim)
@@ -121,6 +123,7 @@ class STWithRSbySPP(nn.Module):
         self.sfLayer = InterSentenceSPPLayer(self.hidden_dim * 2, pool_type=self.pool_type)
         self.rfLayer = InterSentenceSPPLayer(self.hidden_dim * 2, pool_type=self.pool_type)
 
+        # 配合avg与max加和时进行使用
         # self.sfLayer = InterSentenceSPPLayer3(self.hidden_dim*2, pool_type = self.pool_type)
         # self.rfLayer = InterSentenceSPPLayer3(self.hidden_dim*2, pool_type = self.pool_type)
 
@@ -178,7 +181,7 @@ class STWithRSbySPP(nn.Module):
 
         # sentence embedding的句间注意力
         sentFt = self.sfLayer(sentpres)  # sentFt:(batch_n, doc_l,15)
-        sentFt = self.dropout(sentFt)
+        # sentFt = self.dropout(sentFt)
 
         # "add"情况下，将前三个pos位置1：1：1与sentence加和; ['gpos', 'lpos', 'ppos']
         sentpres = self.posLayer(sentpres, pos)  # sentpres:(batch_n, doc_l, hidden_dim*2)
@@ -195,7 +198,7 @@ class STWithRSbySPP(nn.Module):
 
         tag_out = tag_out.transpose(0, 1)  # tag_out: (batch_n, doc_l, sent_dim*2)
         roleFt = self.rfLayer(tag_out)  # roleFt:(batch_n, doc_l, 15)
-        roleFt = self.dropout(roleFt)
+        # roleFt = self.dropout(roleFt)
 
         tag_out = torch.cat((tag_out, sentFt, roleFt), dim=2)  # tag_out: (batch_n, doc_l, sent_dim*2+30)  (1,8,286)
         # tag_out = self.dropout(tag_out)
@@ -225,6 +228,7 @@ class STWithRSbySPP(nn.Module):
 
 
 
+# 单纯的英文模型采用LSTM+SPP的两个dropout0.1效果好一些
 # type_id=1
 class EnSTWithRSbySPP(nn.Module):
     def __init__(self, word_dim, hidden_dim, sent_dim, class_n, p_embd=None, pos_dim=0, p_embd_dim=16,
@@ -239,7 +243,8 @@ class EnSTWithRSbySPP(nn.Module):
         self.p_embd_dim = p_embd_dim
         self.pool_type = pool_type
 
-        self.dropout = nn.Dropout(0.5)
+        self.dropout = nn.Dropout(0.1)
+
         self.sentLayer = nn.LSTM(self.word_dim, self.hidden_dim, bidirectional=True)
         # 为什么sent_dim*2+30？？？因为要接两个句间注意力
         self.classifier = nn.Linear(self.sent_dim * 2 + 30, self.class_n)
@@ -291,7 +296,6 @@ class EnSTWithRSbySPP(nn.Module):
         # (h_n，c_n):保存着RNN最后一个时间步的隐藏层状态；保存着RNN最后一个时间步的细胞状态
         # shape：(num_layers * num_directions, batch, hidden_size)
         sent_out, _ = self.sentLayer(documents, self.sent_hidden)  # sent_out: (sen_l, batch_n*doc_l, hidden_dim*2)
-        # sent_out = self.dropout(sent_out)
 
         if mask is None:
             # sentpres：(batch_n*doc_l,1,256)
@@ -316,7 +320,6 @@ class EnSTWithRSbySPP(nn.Module):
         # (h_0,c_0)：(num_layers * num_directions, batch, hidden_size)
         # output: (seq_len, batch, sent_dim * num_directions)
         tag_out, _ = self.tagLayer(sentpres, self.tag_hidden)  # tag_out: (doc_l, batch_n, sent_dim*2)
-        # tag_out = self.dropout(tag_out)
 
         tag_out = torch.tanh(tag_out)
 
@@ -325,7 +328,6 @@ class EnSTWithRSbySPP(nn.Module):
         roleFt = self.dropout(roleFt)
 
         tag_out = torch.cat((tag_out, sentFt, roleFt), dim=2)  # tag_out: (batch_n, doc_l, sent_dim*2+30)  (1,8,286)
-        # tag_out = self.dropout(tag_out)
 
         # class_n用在了这里
         result = self.classifier(tag_out)  # tag_out: (batch_n, doc_l, class_n)

@@ -1,5 +1,6 @@
 import utils
 from model import *
+from model_gru import *
 
 import numpy as np
 
@@ -23,7 +24,7 @@ plt.switch_backend('Agg')
 
 currenttime = time.localtime()
 
-model_package_name = 'baseline0.6_drop0.1_2_SPP2'
+model_package_name = 'baseline0.6_gru_GRU2_try2'
 
 
 # 固定随机数种子
@@ -214,8 +215,7 @@ def test(model, X, Y, FT, device='cpu', batch_n=1, title=False, is_mask=False):
                 # 2 维度变换后的变量是之前变量的浅拷贝，指向同一区域，即view操作会连带原来的变量一同变形，这是不合法的，所以也会报错；
                 # ---- 这个解释有部分道理，也即contiguous返回了tensor的深拷贝contiguous copy数据；
 
-                result = model(inputs, pos=tp, device=device, mask=mask)[:,
-                         1:].contiguous()  # result: (batch_n, doc_l, class_n)
+                result = model(inputs, pos=tp, device=device, mask=mask)[:, 1:].contiguous()  # result: (batch_n, doc_l, class_n)
                 # (1,7)
                 labels = labels[:, 1:].contiguous()  # labels:(batch_n, doc_l-(title))
             else:
@@ -320,8 +320,8 @@ if __name__ == "__main__":
     # tag_model = STWithRSbySPP(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
     #                           pool_type='max_pool')
 
-    tag_model = STWithRSbySPP(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
-                              pool_type='max+avg_pool')
+    tag_model = STWithRSbySPP_GRU(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
+                              pool_type='max_pool')
 
     if p_embd == 'embd_b':
         tag_model.posLayer.init_embedding()

@@ -176,7 +176,7 @@ def Chinese_test(model_dir):
     is_mask = False
     
     from train import test
-    w_file = './newvalue/%s_%s.csv' % (in_file.split('.')[1].split('/')[-1], model_dir.split('/')[2])
+    w_file = './value/%s_%s.csv' % (in_file.split('.')[1].split('/')[-1], model_dir.split('/')[2])
     test_all(test, model_dir, w_file, (pad_documents, pad_labels, features), title, is_mask=is_mask)
     
 def English_test(model_dir):
@@ -228,9 +228,10 @@ if __name__ == "__main__":
     # model_dir='./model/roles/st_rs_sppm_128_128_ap_211106182840/'
     # Chinese_test(model_dir)
 
-    model_dir = './model/e_roles_4/DiSA_en4/'
+    model_dir = './model/roles/DiSA_ch/'
+    # model_dir = './model/e_roles_4/DiSA_en4/'
     # model_dir = './model/e_roles_4/st_rs_sppm_64_64_211106193443/'
-    English_test(model_dir)
+    Chinese_test(model_dir)
 
     # model_dir = './model/e_roles_3/211106211444/'
     # English_test_ft(model_dir)

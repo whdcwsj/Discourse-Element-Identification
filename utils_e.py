@@ -124,6 +124,7 @@ def sentencePaddingId(en_documents, labels, n_l, is_cutoff=True):
 
 # 输入：每个行数据的每个句子的按顺序对应的六个特征，获取本文中每个句子的embedding的id号，每个句子对应的label列表，Bert的tokenizer
 # ???返回：(batch_n, doc_l, ft_size)
+# 处理新增的手工特征
 def featuresExtend(features, en_documents, en_labels, tokenizer):
 
     # str = "This is a tokenization example"

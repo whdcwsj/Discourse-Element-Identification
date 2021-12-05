@@ -109,7 +109,8 @@ import torch
 # [101, 1045, 2033, 2026, 3067, 2870, 102]
 
 
-import torch
+# import torch
+# import torch.nn as nn
 # print(torch.arange(0., 100).shape)
 # position = torch.arange(0., 100).unsqueeze(1)
 # print(position.shape)
@@ -119,7 +120,30 @@ import torch
 # print(pe[:, 0::2].shape)
 # print(pe[:, 0::2])
 
-wang = torch.zeros(100, 16, 3)
-print(wang.shape)
-si = wang[ : , : , 0]
-print(si.shape)
+# wang = torch.zeros(100, 16, 3)
+# print(wang.shape)
+# si = wang[ : , : , 0]
+# print(si.shape)
+
+import torch
+import torch.nn as nn
+from torch import autograd
+
+# m = nn.Softmax()
+# input = autograd.Variable(torch.randn(2, 3))
+# print(input)
+# print(m(input))
+
+# y = torch.tensor([[[1.,2.,3.],[4.,5.,6.]],[[7.,8.,9.],[10.,11.,12.]]])
+# print(y.shape)
+# #y的size是2,2,3。可以看成有两张表，每张表2行3列
+# net_1 = nn.Softmax(dim=0)
+# net_2 = nn.Softmax(dim=1)
+# net_3 = nn.Softmax(dim=2)
+# print('dim=0的结果是：\n',net_1(y),"\n")
+# print('dim=1的结果是：\n',net_2(y),"\n")
+# print(net_2(y).shape)
+# print('dim=2的结果是：\n',net_3(y),"\n")
+# print(net_3(y).shape)
+
+print(torch.cuda.is_available())

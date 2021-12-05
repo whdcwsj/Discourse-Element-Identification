@@ -1,15 +1,11 @@
 import datetime
 import os
 import logging
-logging.basicConfig(level=logging.INFO,
-                format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-                datefmt='%a, %d %b %Y %H:%M:%S',
-                filename='./log/en_feature_sent_tag_%s.log' % datetime.datetime.now().strftime('%y%m%d%H%M%S'),
-                filemode='w')
                 
 from transformers import BertTokenizer
 # import config
-from model import STWithRSbySPPWithFt2
+from model import *
+from model_gate import *
 import utils_e as utils
 
 import numpy as np
@@ -246,7 +242,7 @@ if __name__ == "__main__":
     if not os.path.isdir(model_dir):
         os.mkdir(model_dir)
 
-    tag_model = STWithRSbySPPWithFt2(embeddings.embedding_dim, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim, ft_size=ft_size)
+    tag_model = STWithRSbySPPWithFt2_GATE(embeddings.embedding_dim, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim, ft_size=ft_size)
 
 
 

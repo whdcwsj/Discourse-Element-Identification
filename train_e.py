@@ -9,6 +9,7 @@ logging.basicConfig(level=logging.INFO,
 
 from transformers import BertTokenizer
 from model import *
+from model_gate import *
 import utils_e as utils
 
 import numpy as np
@@ -202,7 +203,7 @@ if __name__ == "__main__":
     hidden_dim = 64
     sent_dim = 64
 
-    p_embd = None
+    p_embd = 'embd_c'
     pos_dim = 0
     p_embd_dim=16
     if p_embd in ['embd_b', 'embd_c']:
@@ -210,7 +211,9 @@ if __name__ == "__main__":
 
     embeddings = torch.load('./embd/bert-base-uncased-word_embeddings.pkl')
 
-    tag_model = STWithRSbySPP(embeddings.embedding_dim, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim, pool_type='max_pool')
+    # tag_model = STWithRSbySPP(embeddings.embedding_dim, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim, pool_type='max_pool')
+    tag_model = EnSTWithRSbySPP_GATE(embeddings.embedding_dim, hidden_dim, sent_dim, class_n, p_embd=p_embd,
+                              p_embd_dim=p_embd_dim, pool_type='max_pool')
 
     class_n = 4
     model_dir = './model/e_roles_%d/%s_%s/' % (class_n, tag_model.getModelName(), datetime.datetime.now().strftime('%y%m%d%H%M%S'))
