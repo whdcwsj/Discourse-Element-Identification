@@ -126,7 +126,8 @@ def encode(documents, labels, embed_map, vec_size):
 
 # 输入：获取本文中每个句子的embedding(单词组合)，每个句子对应的label列表，句子最大长度max_len=40，中文vec_size=200
 # is_cutoff=True
-def sentence_padding(en_documents, labels, n_l, vec_size, is_cutoff=True):
+
+def sentence_padding(en_documents, labels, n_l, vec_size, is_cutoff=True, dgl=False):
     pad_documents = []
     # 每行的
     for sentences in en_documents:
@@ -172,7 +173,7 @@ def featuresExtend(features, documents):
 
 # 输入：数据集，embedding文件，title = True
 # 返回：获取本文中每个句子的embedding组合(单词组合)，每个句子对应的label列表，每个行数据的每个句子的按顺序对应的六个特征，vec_size
-def getSamplesAndFeatures(in_file, embed_filename, title=False, extend_f=False):
+def getSamplesAndFeatures(in_file, embed_filename, title=False, extend_f=False, dgl=False):
 
     print('load Embeddings...')
 
@@ -192,6 +193,10 @@ def getSamplesAndFeatures(in_file, embed_filename, title=False, extend_f=False):
     # pad_documents, pad_labels = sentence_padding(en_documents, en_labels, 30, vec_size)
 
     return en_documents, en_labels, features, vec_size
+
+
+
+
 
 # X=按照max_len长度进行处理的句子的embedding，Y=每个句子对应的label列表，FT=每个行数据的每个句子的按顺序对应的六个特征，batch_n = 1
 # train的时候，is_random=True，batch_n = 50

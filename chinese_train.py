@@ -25,7 +25,7 @@ plt.switch_backend('Agg')
 
 currenttime = time.localtime()
 
-model_package_name = 'baseline0.6_dgl_test'
+model_package_name = 'baseline0.6_dgl_base'
 
 
 # 固定随机数种子
@@ -288,11 +288,14 @@ if __name__ == "__main__":
     title = True
     max_len = 40
 
+    # 是否在数据中添加dgl所需的每篇文章的实际句子长度
+    add_dgl = True
+
     # 返回：获取本文中每个句子的embedding(单词组合)，每个句子对应的label列表，每个行数据的每个句子的按顺序对应的六个特征，vec_size
     en_documents, en_labels, features, vec_size = utils.getSamplesAndFeatures(in_file, embed_filename, title=title)
 
     # 返回：按照max_len长度进行处理的句子的embedding，每个句子对应的label列表
-    pad_documents, pad_labels = utils.sentence_padding(en_documents, en_labels, max_len, vec_size)
+    pad_documents, pad_labels = utils.sentence_padding(en_documents, en_labels, max_len, vec_size, add_dgl)
 
     is_mask = False
 

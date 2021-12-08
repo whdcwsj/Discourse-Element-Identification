@@ -1,8 +1,53 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import dgl
+import dgl.nn.pytorch as dgltor
 
 from subLayer import *
+
+# pytorch里面自定义层也是通过继承自nn.Module类来实现的
+# pytorch里面一般是没有层的概念，层也是当成一个模型来处理的
+class GraphConvLayer(nn.Module):
+    """
+    Parameters
+    ----------
+    in_feat : int
+        Input feature size.
+    out_feat : int
+        Output feature size.
+    weight : bool, optional
+        If True, apply a linear layer. Otherwise, aggregating the messages
+        without a weight matrix.
+    bias : bool, optional
+        True if bias is added. Default: True
+    activation : callable, optional
+        Activation function. Default: None
+    dropout : float, optional
+        Dropout rate. Default: 0.0
+
+    GraphConv → Parameters
+    ----------
+    allow_zero_in_degree (bool, optional)
+        If there are 0-in-degree nodes in the graph, output for those nodes will be invalid since no message will be passed to those nodes.
+        This is harmful for some applications causing silent performance regression.
+        This module will raise a DGLError if it detects 0-in-degree nodes in input graph.
+        By setting True, it will suppress the check and let the users handle it by themselves. Default: False.
+    """
+
+    def __init__(self, in_feat, out_feat, weight=True, bias=True, activation=None, dropout=0.0):
+        super(GraphConvLayer, self).__init__()
+        self.in_feat = in_feat
+        self.out_feat = out_feat
+
+        self.conv = dgltor.GraphConv(in_feat, out_feat, norm='both', weight=weight, bias=bias, activation=activation)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, g, inputs):
+        hs = self.conv(g, inputs)
+        hs = self.dropout(hs)
+        return hs
+
 
 
 # 针对中文数据集
@@ -21,9 +66,9 @@ class STWithRSbySPP_DGL(nn.Module):
 
         # self.dropout = nn.Dropout(0.1)
         self.sentLayer = nn.LSTM(self.word_dim, self.hidden_dim, bidirectional=True)
+
         # 为什么sent_dim*2+30？？？因为要接两个句间注意力
         self.classifier = nn.Linear(self.sent_dim * 2 + 30, self.class_n)
-
         # 配合avg与max加和时进行使用
         # self.classifier = nn.Linear(self.sent_dim * 2 + 60, self.class_n)
 
@@ -47,16 +92,55 @@ class STWithRSbySPP_DGL(nn.Module):
 
     # batch_size，一篇文章的句子个数
     def init_hidden(self, batch_n, doc_l, device='cpu'):
-        # self.sent_hidden作为nn.LSTM()的第二个输入
-        # 两个元组，shape都是(2,batch_n*doc_l,hidden_dim)
-        # batch_n*doc_l相当于句子数量，
-        # torch.rand()均匀分布，从区间[0, 1)的均匀分布中抽取的一组随机数
-        # uniform_(),将tensor从均匀分布中抽样数值进行填充
+
         self.sent_hidden = (torch.rand(2, batch_n * doc_l, self.hidden_dim, device=device).uniform_(-0.01, 0.01),
                             torch.rand(2, batch_n * doc_l, self.hidden_dim, device=device).uniform_(-0.01, 0.01))
         # 两个元组，shape都是(2,batch_n,hidden_dim)
         self.tag_hidden = (torch.rand(2, batch_n, self.sent_dim, device=device).uniform_(-0.01, 0.01),
                            torch.rand(2, batch_n, self.sent_dim, device=device).uniform_(-0.01, 0.01))
+
+    def build_graph(self, sentence_encoding):
+        # 构建图
+        nodes_num = len(sentence_encoding)
+        edges = []
+        # 计算边的权重
+        edges_weight = []
+        # 构建图
+        for i in range(nodes_num):
+            for j in range(nodes_num):
+                edges.append((i, j))
+                # ------------------------------------------------------------
+                # 计算余弦相似度
+                weight = torch.cosine_similarity(sentence_encoding[i], sentence_encoding[j], dim=0)
+                # ------------------------------------------------------------
+                # 计算欧式距离的相似度
+                # distance = torch.pairwise_distance(sent_encoding[i][None, :],
+                #                                    sent_encoding[j][None, :])
+                # weight = 1 / (1 + distance[0])
+                # ------------------------------------------------------------
+                # 计算pearson相关性系数
+                # pearson = np.corrcoef(sent_encoding[i].cpu().detach().numpy(),
+                #                       sent_encoding[j].cpu().detach().numpy())[0, 1]
+                # weight = torch.tensor(pearson).to(torch.float32).to(self.config.device)
+                # ------------------------------------------------------------
+                # 计算kendall系数
+                # kendall = pd.Series(sent_encoding[i].cpu().detach().numpy()).corr(
+                #     pd.Series(sent_encoding[j].cpu().detach().numpy()), method="kendall")
+                # weight = torch.tensor(kendall).to(torch.float32).to(self.config.device)
+                # ------------------------------------------------------------
+                edges_weight.append(weight)
+                # 额外添加一个自循环
+                if i == j:
+                    edges.append((i, j))
+                    edges_weight.append(weight)
+        edges = torch.tensor(edges)
+        graph = dgl.graph((edges[:, 0], edges[:, 1])).to(self.config.device)
+        # 额外添加一个自循环
+        # graph = dgl.add_self_loop(graph)
+        edges_weight = torch.tensor(edges_weight).to(self.config.device)
+        return graph, edges_weight
+
+
 
     # 测试集情况
     # document:(batch_n,doc_l,40,200)
@@ -109,7 +193,7 @@ class STWithRSbySPP_DGL(nn.Module):
 
     def getModelName(self):
         # pool_type='max_pool'的第一个字母m
-        name = 'st_rs_spp%s' % self.pool_type[0]
+        name = 'dgl_st_rs_spp%s' % self.pool_type[0]
         name += '_' + str(self.hidden_dim) + '_' + str(self.sent_dim)
         if self.p_embd == 'cat':
             name += '_cp'
