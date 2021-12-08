@@ -56,7 +56,7 @@ class STWithRSbySPP_GRU(nn.Module):
 
 
         sent_out, _ = self.sentLayer(documents, self.sent_hidden)  # sent_out: (sen_l, batch_n*doc_l, hidden_dim*2)
-        sent_out = self.dropout(sent_out)
+        # sent_out = self.dropout(sent_out)
 
         if mask is None:
             # sentpres：(batch_n*doc_l,1,256)
@@ -69,19 +69,19 @@ class STWithRSbySPP_GRU(nn.Module):
 
         # sentence embedding的句间注意力
         sentFt = self.sfLayer(sentpres)  # sentFt:(batch_n, doc_l,15)
-        # sentFt = self.dropout(sentFt)
+        sentFt = self.dropout(sentFt)
 
         sentpres = self.posLayer(sentpres, pos)  # sentpres:(batch_n, doc_l, hidden_dim*2)
         sentpres = sentpres.transpose(0, 1)  # sentpres: (doc_l, batch_n, hidden_dim*2)
 
         tag_out, _ = self.tagLayer(sentpres, self.tag_hidden)  # tag_out: (doc_l, batch_n, sent_dim*2)
-        tag_out = self.dropout(tag_out)
+        # tag_out = self.dropout(tag_out)
 
         tag_out = torch.tanh(tag_out)
 
         tag_out = tag_out.transpose(0, 1)  # tag_out: (batch_n, doc_l, sent_dim*2)
         roleFt = self.rfLayer(tag_out)  # roleFt:(batch_n, doc_l, 15)
-        # roleFt = self.dropout(roleFt)
+        roleFt = self.dropout(roleFt)
 
         tag_out = torch.cat((tag_out, sentFt, roleFt), dim=2)  # tag_out: (batch_n, doc_l, sent_dim*2+30)  (1,8,286)
         # tag_out = self.dropout(tag_out)

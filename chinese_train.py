@@ -1,7 +1,7 @@
 import utils
 from model import *
 from model_gru import *
-from model_gate import *
+from model_dgl import *
 
 import numpy as np
 
@@ -25,7 +25,7 @@ plt.switch_backend('Agg')
 
 currenttime = time.localtime()
 
-model_package_name = 'newbaseline0.6_newstructure1_sent_atten'
+model_package_name = 'baseline0.6_dgl_test'
 
 
 # 固定随机数种子
@@ -168,7 +168,6 @@ def train(model, X, Y, FT, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=
         if (lr < 0.0001) or (aver_loss < 0.5):
             break
 
-    # 若无最佳模型，跳过该步骤
     if best_epoch == -1:
         pass
     else:
@@ -321,11 +320,7 @@ if __name__ == "__main__":
         # 返回大于等于该数值的最小整数
         features = utils.discretePos(features)
 
-    # sent_dim用于设置每个句子的维度
-    # tag_model = STWithRSbySPP(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
-    #                           pool_type='max_pool')
-
-    tag_model = STWithRSbySPP_NewStructure1(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
+    tag_model = STWithRSbySPP_DGL(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
                               pool_type='max_pool')
 
     if p_embd == 'embd_b':

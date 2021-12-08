@@ -125,9 +125,9 @@ import torch
 # si = wang[ : , : , 0]
 # print(si.shape)
 
-import torch
-import torch.nn as nn
-from torch import autograd
+# import torch
+# import torch.nn as nn
+# from torch import autograd
 
 # m = nn.Softmax()
 # input = autograd.Variable(torch.randn(2, 3))
@@ -146,4 +146,32 @@ from torch import autograd
 # print('dim=2的结果是：\n',net_3(y),"\n")
 # print(net_3(y).shape)
 
-print(torch.cuda.is_available())
+# print(torch.cuda.is_available())
+
+import torch
+
+a = [[[1,1,1,1],[2,2,2,2],[3,3,3,3]],[[1,1,1,1],[2,2,2,2],[3,3,3,3]]]
+a = torch.tensor(a)
+print(a)
+print(a.shape)
+
+b =[[0.3,0.4,0.5],[0.1,0.2,0.9]]
+b = torch.tensor(b)
+print(b)
+print(b.shape)
+#
+# # # 这样会导致竖着乘积
+# # # c = a*b
+# # # print(c)
+#
+# 这样横着乘积才对
+print(a*b.unsqueeze(-1))
+d = torch.sum(a*b.unsqueeze(-1), dim=1)
+print(d)
+print(d.shape)
+
+# x = torch.randn(2, 3)#为1可以扩展为3和4
+# print(x)
+# x = x.expand(2, 3, 1)
+# print(x)
+# print(x.shape)

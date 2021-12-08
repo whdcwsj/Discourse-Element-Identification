@@ -6,11 +6,11 @@ from subLayer import *
 
 
 # 针对中文数据集
-class STWithRSbySPP(nn.Module):
+class STWithRSbySPP_DGL(nn.Module):
     def __init__(self, word_dim, hidden_dim, sent_dim, class_n, p_embd=None, pos_dim=0, p_embd_dim=16,
                  pool_type='max_pool'):
         # p_embd: 'cat', 'add','embd', 'embd_a'
-        super(STWithRSbySPP, self).__init__()
+        super(STWithRSbySPP_DGL, self).__init__()
         self.word_dim = word_dim
         self.hidden_dim = hidden_dim
         self.sent_dim = sent_dim
