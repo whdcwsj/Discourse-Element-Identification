@@ -25,7 +25,7 @@ plt.switch_backend('Agg')
 
 currenttime = time.localtime()
 
-model_package_name = 'baseline0.6_dgl_base'
+model_package_name = 'baseline0.6_dgl_test'
 
 
 # 固定随机数种子
@@ -40,16 +40,14 @@ def seed_torch(seed=1):
 
 
 # 输入：b_docs, b_labs, b_ft，p_embd = 'add'，device = 'cuda'
-def list2tensor(x, y, ft, p_embd, device='cpu'):
+def list2tensor_dgl(x, y, ft, e_len, p_embd, device='cpu'):
     inputs = torch.tensor(x, dtype=torch.float, device=device)
     labels = torch.tensor(y, dtype=torch.long, device=device)
 
     tp = torch.tensor(ft, dtype=torch.float, device=device)[:, :, :6]
-    # 句子长度补到40,word_embedding
-    # (1,8,40,200)
-    # (1,8)
-    # (1,8,6)
-    return inputs, labels, tp
+    e_len = torch.tensor(e_len, dtype=torch.long, device=device)
+
+    return inputs, labels, tp, e_len
 
 
 # 输入：ft(一行文本中的句子对应的六个特征)
@@ -68,9 +66,10 @@ def getMask(ft, device='cpu'):
     return mask
 
 
-# model=STWithRSbySPP，X=按照max_len长度进行处理的句子的embedding，Y=每个句子对应的label列表，FT=每个行数据的每个句子的按顺序对应的六个特征
+# tag_model, pad_documents, pad_labels, features
+# model，X=按照max_len长度进行处理的句子的embedding，Y=每个句子对应的label列表，FT=每个行数据的每个句子的按顺序对应的六个特征
 # title=True，is_mask=False
-def train(model, X, Y, FT, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=False, is_mask=False):
+def train(model, X, Y, FT, essay_len, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=False, is_mask=False):
 
     modelName = model.getModelName()
     if title:
@@ -78,8 +77,9 @@ def train(model, X, Y, FT, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=
 
     writer = SummaryWriter('./newlog/cn/' +  model_package_name + '/cn_' + modelName + '_' + time.strftime('%m-%d_%H.%M', currenttime))
 
+
     # 10%的数据作为验证集
-    X_train, Y_train, ft_train, X_test, Y_test, ft_test = utils.dataSplit(X, Y, FT, 0.1)
+    X_train, Y_train, ft_train, essay_len_train, X_test, Y_test, ft_test, essay_len_test = utils.dataSplit_dgl(X, Y, FT, essay_len, 0.1)
 
     if (is_gpu):
         model.cuda()
@@ -100,17 +100,17 @@ def train(model, X, Y, FT, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=
     c = 0
     best_epoch = -1
 
-    last_acc, _ = test(model, X_test, Y_test, ft_test, device, title=title, is_mask=is_mask)
+    # last_acc, _ = test_dgl(model, X_test, Y_test, ft_test, essay_len_test, device, title=title, is_mask=is_mask)
 
     for epoch in range(epoch_n):
         total_loss = 0
-        gen = utils.batchGenerator(X_train, Y_train, ft_train, batch_n, is_random=True)
+        gen = utils.batchGenerator_dgl(X_train, Y_train, ft_train,  essay_len_train, batch_n, is_random=True)
         i = 0
         model.train()
-        for x, y, ft in gen:
+        for x, y, ft, e_len in gen:
             optimizer.zero_grad()  # 将梯度归零
 
-            inputs, labels, tp = list2tensor(x, y, ft, model.p_embd, device)  # inputs:(50,34,40,200)
+            inputs, labels, tp, e_length = list2tensor_dgl(x, y, ft, e_len, model.p_embd, device)  # inputs:(50,34,40,200)
 
             if is_mask:
                 mask = getMask(ft, device)
@@ -118,10 +118,10 @@ def train(model, X, Y, FT, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=
                 mask = None
 
             if title:
-                result = model(inputs, pos=tp, device=device, mask=mask)[:, 1:].contiguous()  # result: (batch_n, doc_l-1, class_n)
+                result = model(inputs, pos=tp, length_essay=e_length, device=device, mask=mask)[:, 1:].contiguous()  # result: (batch_n, doc_l-1, class_n)
                 labels = labels[:, 1:].contiguous()
             else:
-                result = model(inputs, pos=tp, device=device, mask=mask)
+                result = model(inputs, pos=tp, length_essay=e_length, device=device, mask=mask)
 
             r_n = labels.size()[0] * labels.size()[1]
             result = result.contiguous().view(r_n, -1)
@@ -137,7 +137,7 @@ def train(model, X, Y, FT, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=
         aver_loss = total_loss / i
         loss_list.append(aver_loss)
 
-        accuracy, _ = test(model, X_test, Y_test, ft_test, device, title=title, is_mask=is_mask)
+        accuracy, _ = test_dgl(model, X_test, Y_test, ft_test, device, title=title, is_mask=is_mask)
         acc_list.append(accuracy)
 
         writer.add_scalar("loss/train", aver_loss, epoch)
@@ -186,21 +186,21 @@ def train(model, X, Y, FT, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=
 
 # 训练集数据的10%，作为验证集
 # X=按照max_len长度进行处理的句子的embedding，Y=每个句子对应的label列表，FT=每个行数据的每个句子的按顺序对应的六个特征
-def test(model, X, Y, FT, device='cpu', batch_n=1, title=False, is_mask=False):
+def test_dgl(model, X, Y, FT, essay_len, device='cpu', batch_n=1, title=False, is_mask=False):
     result_list = []
     label_list = []
     model.eval()
     with torch.no_grad():
         # 返回：b_docs, b_labs, b_ft
         # 有一定排序的，先短后长
-        gen = utils.batchGenerator(X, Y, FT, batch_n)
-        for x, y, ft in gen:
+        gen = utils.batchGenerator_dgl(X, Y, FT, essay_len, batch_n)
+        for x, y, ft, e_len in gen:
 
             # (1,8,40,200)
             # (1,8)
             # (1,8,6)
             # tensor化
-            inputs, labels, tp = list2tensor(x, y, ft, model.p_embd, device)
+            inputs, labels, tp, e_length = list2tensor_dgl(x, y, ft, e_len, model.p_embd, device)
 
             if is_mask:
                 mask = getMask(ft, device)
@@ -219,11 +219,11 @@ def test(model, X, Y, FT, device='cpu', batch_n=1, title=False, is_mask=False):
                 # 2 维度变换后的变量是之前变量的浅拷贝，指向同一区域，即view操作会连带原来的变量一同变形，这是不合法的，所以也会报错；
                 # ---- 这个解释有部分道理，也即contiguous返回了tensor的深拷贝contiguous copy数据；
 
-                result = model(inputs, pos=tp, device=device, mask=mask)[:, 1:].contiguous()  # result: (batch_n, doc_l, class_n)
+                result = model(inputs, pos=tp, length_essay=e_length, device=device, mask=mask)[:, 1:].contiguous()  # result: (batch_n, doc_l, class_n)
                 # (1,7)
                 labels = labels[:, 1:].contiguous()  # labels:(batch_n, doc_l-(title))
             else:
-                result = model(inputs, pos=tp, device=device, mask=mask)
+                result = model(inputs, pos=tp, length_essay=e_length, device=device, mask=mask)
 
             r_n = labels.size()[0] * labels.size()[1]
             # view：把原先tensor中的数据按照行优先的顺序排成一个一维的数据，然后按照参数组合成其他维度的tensor。
@@ -277,7 +277,7 @@ def predict(model, x, ft, device='cpu', title=False):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Chinese Discourse', usage='newtrain.py [<args>] [-h | --help]')
-    parser.add_argument('--seed_num', default=1, type=int, help='Set seed num.')
+    parser.add_argument('--seed_num', default=100, type=int, help='Set seed num.')
     args = parser.parse_args()
 
     seed_torch(args.seed_num)
@@ -288,14 +288,13 @@ if __name__ == "__main__":
     title = True
     max_len = 40
 
-    # 是否在数据中添加dgl所需的每篇文章的实际句子长度
-    add_dgl = True
-
     # 返回：获取本文中每个句子的embedding(单词组合)，每个句子对应的label列表，每个行数据的每个句子的按顺序对应的六个特征，vec_size
     en_documents, en_labels, features, vec_size = utils.getSamplesAndFeatures(in_file, embed_filename, title=title)
 
-    # 返回：按照max_len长度进行处理的句子的embedding，每个句子对应的label列表
-    pad_documents, pad_labels = utils.sentence_padding(en_documents, en_labels, max_len, vec_size, add_dgl)
+    # 返回：按照max_len长度进行处理的句子的embedding(保证每个句子的长度一样了)，每个句子对应的label列表
+    pad_documents, pad_labels, essay_length = utils.sentence_padding_dgl(en_documents, en_labels, max_len, vec_size)
+
+
 
     is_mask = False
 
@@ -344,7 +343,7 @@ if __name__ == "__main__":
 
     print("start Chinese model training")
     starttime = datetime.datetime.now()
-    train(tag_model, pad_documents, pad_labels, features, is_gpu, epoch_n=700, lr=0.2, batch_n=batch_n, title=title,
+    train(tag_model, pad_documents, pad_labels, features, essay_length, is_gpu, epoch_n=700, lr=0.2, batch_n=batch_n, title=title,
           is_mask=is_mask)
     endtime = datetime.datetime.now()
     print("本次seed为%d的训练耗时：" % int(args.seed_num))

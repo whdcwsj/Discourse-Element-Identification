@@ -149,16 +149,17 @@ class STWithRSbySPP_NewStructure1(nn.Module):
         self.sentLayer = nn.LSTM(self.word_dim, self.hidden_dim, bidirectional=True)
 
         # new_structure1的情况
-        self.classifier = nn.Linear(self.sent_dim * 2, self.class_n)
+        # self.classifier = nn.Linear(self.sent_dim * 2, self.class_n)
         # gate2的情况
         # self.classifier = nn.Linear(self.sent_dim * 2 + 15, self.class_n)
-        # self.classifier = nn.Linear(self.sent_dim * 2 + 30, self.class_n)
+        # baseline；new_structure1+2个SPP
+        self.classifier = nn.Linear(self.sent_dim * 2 + 30, self.class_n)
         # self.classifier = nn.Linear(self.sent_dim * 2 + 60, self.class_n)
 
         self.posLayer = PositionLayer(p_embd, p_embd_dim)
 
-        # self.sfLayer = InterSentenceSPPLayer(self.hidden_dim * 2, pool_type=self.pool_type)
-        # self.rfLayer = InterSentenceSPPLayer(self.hidden_dim * 2, pool_type=self.pool_type)
+        self.sfLayer = InterSentenceSPPLayer(self.hidden_dim * 2, pool_type=self.pool_type)
+        self.rfLayer = InterSentenceSPPLayer(self.hidden_dim * 2, pool_type=self.pool_type)
 
         # self.sfLayer = InterSentenceSPPLayer3(self.hidden_dim*2, pool_type = self.pool_type)
         # self.rfLayer = InterSentenceSPPLayer3(self.hidden_dim*2, pool_type = self.pool_type)
@@ -204,7 +205,7 @@ class STWithRSbySPP_NewStructure1(nn.Module):
         sentpres = sentpres.view(batch_n, doc_l, self.hidden_dim * 2)  # sentpres: (batch_n, doc_l, hidden_dim*2)
 
         # sentence embedding的句间注意力
-        # sentFt = self.sfLayer(sentpres)  # sentFt:(batch_n, doc_l,15)
+        sentFt = self.sfLayer(sentpres)  # sentFt:(batch_n, doc_l,15)
         # sentFt = self.dropout(sentFt)
 
         sentpres = self.posLayer(sentpres, pos)  # sentpres:(batch_n, doc_l, hidden_dim*2)
@@ -215,15 +216,18 @@ class STWithRSbySPP_NewStructure1(nn.Module):
         # 记录一下句子的编码
         sent_encoding = tag_out.transpose(0,1)  # sent_encoding:(batch_n, doc_l, sent_dim*2)
 
-        self_attention = self.dropout(tag_out)
+        tag_out = self.dropout(tag_out)  # tag_out: (doc_l, batch_n, sent_dim*2)
 
         # ACL2020中，此处需要加一层全连接
-        self_attention = self.ws3(self_attention)
+        self_attention = self.ws3(tag_out)
 
         self_attention = torch.tanh(self_attention)
         self_attention = self_attention.transpose(0, 1)  # self_attention: (batch_n, doc_l, sent_dim*2)
 
-        # roleFt = self.rfLayer(tag_out)  # roleFt:(batch_n, doc_l, 15)
+        tag_out = torch.tanh(tag_out)
+        tag_out = tag_out.transpose(0, 1)  # tag_out: (batch_n, doc_l, sent_dim*2)
+
+        roleFt = self.rfLayer(tag_out)  # roleFt:(batch_n, doc_l, 15)
         # roleFt = self.dropout(roleFt)
 
         # squeeze()删除维度为1的
@@ -240,13 +244,12 @@ class STWithRSbySPP_NewStructure1(nn.Module):
 
         out_s = torch.cat([sent_encoding, essay_encoding * sent_encoding, essay_encoding - sent_encoding], 2)
 
-        pre_pred = F.tanh(self.pre_pred(self.dropout(out_s)))
+        pre_pred = F.tanh(self.pre_pred(self.dropout(out_s)))   # pre_pred:(batch_n, doc_l, sent_dim*2)
 
         pre_pred = self.dropout(pre_pred)
 
-
         # 原先的
-        # tag_out = torch.cat((tag_out, sentFt, roleFt), dim=2)  # tag_out: (batch_n, doc_l, sent_dim*2+30)  (1,8,286)
+        new_output = torch.cat((pre_pred, sentFt, roleFt), dim=2)  # tag_out: (batch_n, doc_l, sent_dim*2+30)  (1,8,286)
 
         # gate1
         # 相当于双线性层输出
@@ -259,7 +262,7 @@ class STWithRSbySPP_NewStructure1(nn.Module):
         # new_value = gamma * sentFt + (1 - gamma) * roleFt
         # new_tag_out = torch.cat((tag_out, new_value), dim=2)
 
-        result = self.classifier(pre_pred)  # tag_out: (batch_n, doc_l, class_n)
+        result = self.classifier(new_output)  # tag_out: (batch_n, doc_l, class_n)
 
         result = F.log_softmax(result, dim=2)  # result: (batch_n, doc_l, class_n)
         return result

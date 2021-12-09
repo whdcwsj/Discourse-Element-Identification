@@ -53,7 +53,7 @@ class GraphConvLayer(nn.Module):
 # 针对中文数据集
 class STWithRSbySPP_DGL(nn.Module):
     def __init__(self, word_dim, hidden_dim, sent_dim, class_n, p_embd=None, pos_dim=0, p_embd_dim=16,
-                 pool_type='max_pool'):
+                 pool_type='max_pool', dgl_layer=1):
         # p_embd: 'cat', 'add','embd', 'embd_a'
         super(STWithRSbySPP_DGL, self).__init__()
         self.word_dim = word_dim
@@ -89,6 +89,16 @@ class STWithRSbySPP_DGL(nn.Module):
             self.tagLayer = nn.LSTM(self.hidden_dim * 2 + 3, self.sent_dim, bidirectional=True)
         else:
             self.tagLayer = nn.LSTM(self.hidden_dim * 2, self.sent_dim, bidirectional=True)
+
+        self.SAGE_GCN = nn.ModuleList(
+            [dgltor.SAGEConv(self.sent_dim * 2, self.sent_dim * 2, 'gcn', feat_drop=0.1, activation=nn.ReLU())
+             for _ in range(dgl_layer)])
+
+        self.temp_layer = nn.Sequential(
+            nn.Linear(self.sent_dim * 2 * (dgl_layer + 1), self.sent_dim * 2),
+            nn.ReLU(),
+            nn.Dropout(0.1)
+        )
 
     # batch_size，一篇文章的句子个数
     def init_hidden(self, batch_n, doc_l, device='cpu'):
@@ -141,12 +151,11 @@ class STWithRSbySPP_DGL(nn.Module):
         return graph, edges_weight
 
 
-
     # 测试集情况
     # document:(batch_n,doc_l,40,200)
     # pos:(batch_n,doc_l,6)  6个特征：['gpos', 'lpos', 'ppos', 'gid', 'lid', 'pid']
     # mask:NONE
-    def forward(self, documents, pos=None, device='cpu', mask=None):
+    def forward(self, documents, pos=None, length_essay=None, device='cpu', mask=None):
         batch_n, doc_l, sen_l, _ = documents.size()  # documents: (batch_n, doc_l, sen_l, word_dim)
         self.init_hidden(batch_n=batch_n, doc_l=doc_l, device=device)
         documents = documents.view(batch_n * doc_l, sen_l, -1).transpose(0,1)  # documents: (sen_l, batch_n*doc_l, word_dim)
@@ -170,6 +179,11 @@ class STWithRSbySPP_DGL(nn.Module):
 
         # "add"情况下，将前三个pos位置1：1：1与sentence加和; ['gpos', 'lpos', 'ppos']
         sentpres = self.posLayer(sentpres, pos)  # sentpres:(batch_n, doc_l, hidden_dim*2)
+
+
+        # 可以加dgl的位置1(先加dgl，再加pos)
+
+
         sentpres = sentpres.transpose(0, 1)  # sentpres: (doc_l, batch_n, hidden_dim*2)
 
         tag_out, _ = self.tagLayer(sentpres, self.tag_hidden)  # tag_out: (doc_l, batch_n, sent_dim*2)
@@ -178,6 +192,40 @@ class STWithRSbySPP_DGL(nn.Module):
         tag_out = torch.tanh(tag_out)
 
         tag_out = tag_out.transpose(0, 1)  # tag_out: (batch_n, doc_l, sent_dim*2)
+
+
+        # 可以加dgl的位置2(先加pos，再加dgl)
+        # ---------------------------------------------------------------------
+
+        # 加入GCN
+        # length_essay
+        # tensor([30, 30, 30, 30, 30, 30, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31,
+        #         31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31,
+        #         31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31],
+        #        device='cuda:0')
+
+        # 存储每篇文章经过dgl之后的feature
+        sentence_feature = []
+        for i in range(len(length_essay)):
+            inner_sentennce = tag_out[i]
+            # build graph
+            graph, edge_weight = self.build_graph(inner_sentennce)
+
+            # add different GCN，句间交互
+            for gcn in self.sage_gcns:
+                inner_sentennce = gcn(graph, inner_sentennce, edge_weight)
+                sentence_feature.append(inner_sentennce)
+
+        # feature_bank = torch.cat(feature_bank, dim=-1)
+        # inner_pred = self.middle_layer(feature_bank)[None, :, :]
+
+        # ----------------------------------------------------------------------
+
+
+
+
+
+
         roleFt = self.rfLayer(tag_out)  # roleFt:(batch_n, doc_l, 15)
         # roleFt = self.dropout(roleFt)
 

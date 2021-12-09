@@ -25,7 +25,7 @@ plt.switch_backend('Agg')
 
 currenttime = time.localtime()
 
-model_package_name = 'newbaseline0.6_newstructure1_sent_atten'
+model_package_name = 'newbaseline0.6_newstructure1_sent_atten_SPP'
 
 
 # 固定随机数种子
@@ -226,8 +226,16 @@ def test(model, X, Y, FT, device='cpu', batch_n=1, title=False, is_mask=False):
             else:
                 result = model(inputs, pos=tp, device=device, mask=mask)
 
+            if labels.size()[0] == 0:
+                print("labels的batch_n为0")
+            if labels.size()[1] == 0:
+                print("labels的doc_l-(title)为0")
+
             r_n = labels.size()[0] * labels.size()[1]
             # view：把原先tensor中的数据按照行优先的顺序排成一个一维的数据，然后按照参数组合成其他维度的tensor。
+
+            # RuntimeError: cannot reshape tensor of 0 elements into shape [0, -1] because the unspecified dimension size -1 can be any value and is ambiguous
+            # RuntimeError:无法将0元素的张量重塑为形状[0，-1]，因为未指定的维度大小-1可以是任何值，并且不明确
             result = result.contiguous().view(r_n, -1)  # result: (doc_l, class_n)  batch_n为1的情况下
             # label变成一维的
             labels = labels.view(r_n)
@@ -278,7 +286,7 @@ def predict(model, x, ft, device='cpu', title=False):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Chinese Discourse', usage='newtrain.py [<args>] [-h | --help]')
-    parser.add_argument('--seed_num', default=1, type=int, help='Set seed num.')
+    parser.add_argument('--seed_num', default=800, type=int, help='Set seed num.')
     args = parser.parse_args()
 
     seed_torch(args.seed_num)

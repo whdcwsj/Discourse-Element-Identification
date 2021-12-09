@@ -177,6 +177,12 @@ import torch
 # print(x.shape)
 
 
+b = []
+a = [1,2,3,4,5,6]
+b.append(a[:10])
+print(b)
+
+
 
 
 
