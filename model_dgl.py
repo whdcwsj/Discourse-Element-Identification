@@ -23,16 +23,16 @@ class STWithRSbySPP_DGL(nn.Module):
         self.p_embd_dim = p_embd_dim
         self.pool_type = pool_type
 
-        # self.dropout = nn.Dropout(0.1)
+        self.dropout = nn.Dropout(0.1)
         self.sentLayer = nn.LSTM(self.word_dim, self.hidden_dim, bidirectional=True)
 
         # 为什么sent_dim*2+30？？？因为要接两个句间注意力
-        # self.classifier = nn.Linear(self.sent_dim * 2 + 30, self.class_n)
+        self.classifier = nn.Linear(self.sent_dim * 2 + 30, self.class_n)
         # 配合avg与max加和时进行使用
         # self.classifier = nn.Linear(self.sent_dim * 2 + 60, self.class_n)
 
         # 单独dgl，不加SPP
-        self.classifier = nn.Linear(self.sent_dim * 2, self.class_n)
+        # self.classifier = nn.Linear(self.sent_dim * 2, self.class_n)
 
         self.posLayer = PositionLayer(p_embd, p_embd_dim)
 
@@ -115,7 +115,7 @@ class STWithRSbySPP_DGL(nn.Module):
         documents = documents.view(batch_n * doc_l, sen_l, -1).transpose(0,1)  # documents: (sen_l, batch_n*doc_l, word_dim)
 
         sent_out, _ = self.sentLayer(documents, self.sent_hidden)  # sent_out: (sen_l, batch_n*doc_l, hidden_dim*2)
-        # sent_out = self.dropout(sent_out)
+        sent_out = self.dropout(sent_out)
 
         if mask is None:
             # sentpres：(batch_n*doc_l,1,256)
@@ -128,7 +128,7 @@ class STWithRSbySPP_DGL(nn.Module):
         sentpres = sentpres.view(batch_n, doc_l, self.hidden_dim * 2)  # sentpres: (batch_n, doc_l, hidden_dim*2)
 
         # sentence embedding的句间注意力
-        # sentFt = self.sfLayer(sentpres)  # sentFt:(batch_n, doc_l,15)
+        sentFt = self.sfLayer(sentpres)  # sentFt:(batch_n, doc_l,15)
         # sentFt = self.dropout(sentFt)
 
         # "add"情况下，将前三个pos位置1：1：1与sentence加和; ['gpos', 'lpos', 'ppos']
@@ -187,15 +187,14 @@ class STWithRSbySPP_DGL(nn.Module):
         # ----------------------------------------------------------------------
 
 
-
-        # roleFt = self.rfLayer(tag_out)  # roleFt:(batch_n, doc_l, 15)
+        roleFt = self.rfLayer(tag_out)  # roleFt:(batch_n, doc_l, 15)
         # roleFt = self.dropout(roleFt)
 
-        # tag_out = torch.cat((tag_out, sentFt, roleFt), dim=2)  # tag_out: (batch_n, doc_l, sent_dim*2+30)  (1,8,286)
-        # tag_out = self.dropout(tag_out)
+        new_out = torch.cat((dgl_out, sentFt, roleFt), dim=2)  # tag_out: (batch_n, doc_l, sent_dim*2+30)  (1,8,286)
+        # new_out = self.dropout(tag_out)
 
         # class_n用在了这里
-        result = self.classifier(dgl_out)  # tag_out: (batch_n, doc_l, class_n)
+        result = self.classifier(new_out)  # tag_out: (batch_n, doc_l, class_n)
 
         # log_softmax 和 nll_loss配套使用
         result = F.log_softmax(result, dim=2)  # result: (batch_n, doc_l, class_n)

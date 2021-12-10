@@ -27,7 +27,7 @@ plt.switch_backend('Agg')
 
 currenttime = time.localtime()
 
-model_package_name = 'baseline0.6_dgl_test'
+model_package_name = 'dgl0.6_pos2_dgl3_base'
 
 
 # 固定随机数种子
@@ -288,7 +288,7 @@ def test_dgl(model, X, Y, FT, essay_len, device='cpu', batch_n=1, title=False, i
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Chinese Discourse', usage='newtrain.py [<args>] [-h | --help]')
-    parser.add_argument('--seed_num', default=100, type=int, help='Set seed num.')
+    parser.add_argument('--seed_num', default=1, type=int, help='Set seed num.')
     args = parser.parse_args()
 
     seed_torch(args.seed_num)
