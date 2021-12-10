@@ -13,6 +13,8 @@ import torch.nn.functional as F
 import datetime
 import os
 import logging
+import tqdm
+from tqdm import *
 
 from tensorboardX import SummaryWriter
 import time
@@ -100,14 +102,19 @@ def train(model, X, Y, FT, essay_len, is_gpu=False, epoch_n=10, lr=0.1, batch_n=
     c = 0
     best_epoch = -1
 
-    # last_acc, _ = test_dgl(model, X_test, Y_test, ft_test, essay_len_test, device, title=title, is_mask=is_mask)
+    last_acc, _ = test_dgl(model, X_test, Y_test, ft_test, essay_len_test, device, title=title, is_mask=is_mask)
 
-    for epoch in range(epoch_n):
+    for epoch in tqdm(range(epoch_n)):
         total_loss = 0
         gen = utils.batchGenerator_dgl(X_train, Y_train, ft_train,  essay_len_train, batch_n, is_random=True)
         i = 0
         model.train()
         for x, y, ft, e_len in gen:
+
+            # print("train")
+            # print(type(e_len))
+            # print(type(e_len[0]))
+
             optimizer.zero_grad()  # 将梯度归零
 
             inputs, labels, tp, e_length = list2tensor_dgl(x, y, ft, e_len, model.p_embd, device)  # inputs:(50,34,40,200)
@@ -137,7 +144,7 @@ def train(model, X, Y, FT, essay_len, is_gpu=False, epoch_n=10, lr=0.1, batch_n=
         aver_loss = total_loss / i
         loss_list.append(aver_loss)
 
-        accuracy, _ = test_dgl(model, X_test, Y_test, ft_test, device, title=title, is_mask=is_mask)
+        accuracy, _ = test_dgl(model, X_test, Y_test, ft_test, essay_len_test, device, title=title, is_mask=is_mask)
         acc_list.append(accuracy)
 
         writer.add_scalar("loss/train", aver_loss, epoch)
@@ -200,6 +207,10 @@ def test_dgl(model, X, Y, FT, essay_len, device='cpu', batch_n=1, title=False, i
             # (1,8)
             # (1,8,6)
             # tensor化
+            # print("test_dgl")
+            # print(type(e_len))
+            # print(type(e_len[0]))
+
             inputs, labels, tp, e_length = list2tensor_dgl(x, y, ft, e_len, model.p_embd, device)
 
             if is_mask:
@@ -262,16 +273,16 @@ def test_dgl(model, X, Y, FT, essay_len, device='cpu', batch_n=1, title=False, i
     return accuracy, a
 
 
-def predict(model, x, ft, device='cpu', title=False):
-    inputs, _, tp = list2tensor(x, [], ft, model.p_embd, device)
-
-    if title:
-        result = model(inputs, pos=tp, device=device)[:, 1:].contiguous()
-    else:
-        result = model(inputs, pos=tp, device=device)
-    r_n = result.size()[0] * result.size()[1]
-    result = result.contiguous().view(r_n, -1)
-    return result.cpu().argmax(dim=1).tolist()
+# def predict(model, x, ft, device='cpu', title=False):
+#     inputs, _, tp = list2tensor(x, [], ft, model.p_embd, device)
+#
+#     if title:
+#         result = model(inputs, pos=tp, device=device)[:, 1:].contiguous()
+#     else:
+#         result = model(inputs, pos=tp, device=device)
+#     r_n = result.size()[0] * result.size()[1]
+#     result = result.contiguous().view(r_n, -1)
+#     return result.cpu().argmax(dim=1).tolist()
 
 
 if __name__ == "__main__":
@@ -294,8 +305,6 @@ if __name__ == "__main__":
     # 返回：按照max_len长度进行处理的句子的embedding(保证每个句子的长度一样了)，每个句子对应的label列表
     pad_documents, pad_labels, essay_length = utils.sentence_padding_dgl(en_documents, en_labels, max_len, vec_size)
 
-
-
     is_mask = False
 
     # Introduction，Thesis，Main Idea，Evidence，Elaboration，Conclusion，Other，Padding
@@ -311,6 +320,8 @@ if __name__ == "__main__":
     hidden_dim = 128
     sent_dim = 128
 
+    dgl_layers = 1
+
     p_embd = 'add'
     p_embd_dim = 16
 
@@ -323,7 +334,7 @@ if __name__ == "__main__":
         features = utils.discretePos(features)
 
     tag_model = STWithRSbySPP_DGL(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
-                              pool_type='max_pool')
+                              pool_type='max_pool', dgl_layer=dgl_layers)
 
     if p_embd == 'embd_b':
         tag_model.posLayer.init_embedding()

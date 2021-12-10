@@ -177,11 +177,25 @@ import torch
 # print(x.shape)
 
 
-b = []
-a = [1,2,3,4,5,6]
-b.append(a[:10])
-print(b)
+# b = []
+# a = [1,2,3,4,5,6]
+# b.append(a[:10])
+# print(b)
 
+
+# ------------------------------------------------------------
+# 计算欧式距离的相似度
+# distance = torch.pairwise_distance(sent_encoding[i][None, :], sent_encoding[j][None, :])
+# weight = 1 / (1 + distance[0])
+# ------------------------------------------------------------
+# 计算pearson相关性系数
+# pearson = np.corrcoef(sent_encoding[i].cpu().detach().numpy(), sent_encoding[j].cpu().detach().numpy())[0, 1]
+# weight = torch.tensor(pearson).to(torch.float32).to(self.config.device)
+# ------------------------------------------------------------
+# 计算kendall系数
+# kendall = pd.Series(sent_encoding[i].cpu().detach().numpy()).corr(
+#     pd.Series(sent_encoding[j].cpu().detach().numpy()), method="kendall")
+# weight = torch.tensor(kendall).to(torch.float32).to(self.config.device)
 
 
 

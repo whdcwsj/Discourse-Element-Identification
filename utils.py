@@ -163,7 +163,7 @@ def sentence_padding_dgl(en_documents, labels, n_l, vec_size, is_cutoff=True):
     for sentences in en_documents:
         # 每篇文章的实际句子个数
         length = len(sentences)
-        out_essay_length.append(length)
+        out_essay_length.append(int(length))
         out_sentences = []
         # 其中的每一个句子
         for sentence in sentences:
@@ -417,14 +417,14 @@ def dataSplit_dgl(X, Y, ft=None, essay_len=None, p=0.1):
             if ft:
                 ft_test.append(ft[i])
             if essay_len:
-                test_essay_len.append(essay_len[i])
+                test_essay_len.append(int(essay_len[i]))
         else:
             X_train.append(X[i])
             Y_train.append(Y[i])
             if ft:
                 ft_train.append(ft[i])
             if essay_len:
-                train_essay_len.append(essay_len[i])
+                train_essay_len.append(int(essay_len[i]))
     if not ft:
         ft_test = None
         ft_train = None

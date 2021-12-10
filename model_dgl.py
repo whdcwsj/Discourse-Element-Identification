@@ -8,45 +8,35 @@ from subLayer import *
 
 # pytorch里面自定义层也是通过继承自nn.Module类来实现的
 # pytorch里面一般是没有层的概念，层也是当成一个模型来处理的
-class GraphConvLayer(nn.Module):
-    """
-    Parameters
-    ----------
-    in_feat : int
-        Input feature size.
-    out_feat : int
-        Output feature size.
-    weight : bool, optional
-        If True, apply a linear layer. Otherwise, aggregating the messages
-        without a weight matrix.
-    bias : bool, optional
-        True if bias is added. Default: True
-    activation : callable, optional
-        Activation function. Default: None
-    dropout : float, optional
-        Dropout rate. Default: 0.0
 
-    GraphConv → Parameters
-    ----------
-    allow_zero_in_degree (bool, optional)
-        If there are 0-in-degree nodes in the graph, output for those nodes will be invalid since no message will be passed to those nodes.
-        This is harmful for some applications causing silent performance regression.
-        This module will raise a DGLError if it detects 0-in-degree nodes in input graph.
-        By setting True, it will suppress the check and let the users handle it by themselves. Default: False.
-    """
-
-    def __init__(self, in_feat, out_feat, weight=True, bias=True, activation=None, dropout=0.0):
-        super(GraphConvLayer, self).__init__()
-        self.in_feat = in_feat
-        self.out_feat = out_feat
-
-        self.conv = dgltor.GraphConv(in_feat, out_feat, norm='both', weight=weight, bias=bias, activation=activation)
-        self.dropout = nn.Dropout(dropout)
-
-    def forward(self, g, inputs):
-        hs = self.conv(g, inputs)
-        hs = self.dropout(hs)
-        return hs
+# class SAGEConv(nn.Module):
+#     Parameters
+#     ----------
+#     in_feats : int, or pair of ints
+#         Input feature size; i.e, the number of dimensions of :math:`h_i^{(l)}`.
+#
+#         SAGEConv can be applied on homogeneous graph and unidirectional
+#         `bipartite graph <https://docs.dgl.ai/generated/dgl.bipartite.html?highlight=bipartite>`__.
+#         If the layer applies on a unidirectional bipartite graph, ``in_feats``
+#         specifies the input feature size on both the source and destination nodes.  If
+#         a scalar is given, the source and destination node feature size would take the
+#         same value.
+#
+#         If aggregator type is ``gcn``, the feature size of source and destination nodes
+#         are required to be the same.
+#     out_feats : int
+#         Output feature size; i.e, the number of dimensions of :math:`h_i^{(l+1)}`.
+#     feat_drop : float
+#         Dropout rate on features, default: ``0``.
+#     aggregator_type : str
+#         Aggregator type to use (``mean``, ``gcn``, ``pool``, ``lstm``).
+#     bias : bool
+#         If True, adds a learnable bias to the output. Default: ``True``.
+#     norm : callable activation function/layer or None, optional
+#         If not None, applies normalization to the updated node features.
+#     activation : callable activation function/layer or None, optional
+#         If not None, applies an activation function to the updated node features.
+#         Default: ``None``.
 
 
 
@@ -68,9 +58,12 @@ class STWithRSbySPP_DGL(nn.Module):
         self.sentLayer = nn.LSTM(self.word_dim, self.hidden_dim, bidirectional=True)
 
         # 为什么sent_dim*2+30？？？因为要接两个句间注意力
-        self.classifier = nn.Linear(self.sent_dim * 2 + 30, self.class_n)
+        # self.classifier = nn.Linear(self.sent_dim * 2 + 30, self.class_n)
         # 配合avg与max加和时进行使用
         # self.classifier = nn.Linear(self.sent_dim * 2 + 60, self.class_n)
+
+        # 单独dgl，不加SPP
+        self.classifier = nn.Linear(self.sent_dim * 2, self.class_n)
 
         self.posLayer = PositionLayer(p_embd, p_embd_dim)
 
@@ -90,13 +83,13 @@ class STWithRSbySPP_DGL(nn.Module):
         else:
             self.tagLayer = nn.LSTM(self.hidden_dim * 2, self.sent_dim, bidirectional=True)
 
+        # 是否添加norm，后续需要进行尝试:'right'或者'none',default='both'
         self.SAGE_GCN = nn.ModuleList(
-            [dgltor.SAGEConv(self.sent_dim * 2, self.sent_dim * 2, 'gcn', feat_drop=0.1, activation=nn.ReLU())
+            [dgltor.SAGEConv(self.sent_dim * 2, self.sent_dim * 2, aggregator_type='gcn', feat_drop=0.1, bias=True, activation=nn.ReLU())
              for _ in range(dgl_layer)])
 
-        self.temp_layer = nn.Sequential(
-            nn.Linear(self.sent_dim * 2 * (dgl_layer + 1), self.sent_dim * 2),
-            nn.ReLU(),
+        self.transition_layer = nn.Sequential(
+            nn.Linear(self.sent_dim * 2 * dgl_layer , self.sent_dim * 2),
             nn.Dropout(0.1)
         )
 
@@ -109,45 +102,37 @@ class STWithRSbySPP_DGL(nn.Module):
         self.tag_hidden = (torch.rand(2, batch_n, self.sent_dim, device=device).uniform_(-0.01, 0.01),
                            torch.rand(2, batch_n, self.sent_dim, device=device).uniform_(-0.01, 0.01))
 
-    def build_graph(self, sentence_encoding):
-        # 构建图
-        nodes_num = len(sentence_encoding)
+    #  sentence_encoding:(doc_l, sent_dim*2)，actual_length:实际节点个数
+    def build_graph(self, sentence_encoding, actual_length, device='cpu'):
+
+        nodes_num = actual_length
+        # 保存每对边的连接
         edges = []
-        # 计算边的权重
+        # 保存边的节点权重
         edges_weight = []
-        # 构建图
+
         for i in range(nodes_num):
             for j in range(nodes_num):
+                # 构建双向图(自循环已经考虑进去了)
                 edges.append((i, j))
-                # ------------------------------------------------------------
                 # 计算余弦相似度
                 weight = torch.cosine_similarity(sentence_encoding[i], sentence_encoding[j], dim=0)
-                # ------------------------------------------------------------
-                # 计算欧式距离的相似度
-                # distance = torch.pairwise_distance(sent_encoding[i][None, :],
-                #                                    sent_encoding[j][None, :])
-                # weight = 1 / (1 + distance[0])
-                # ------------------------------------------------------------
-                # 计算pearson相关性系数
-                # pearson = np.corrcoef(sent_encoding[i].cpu().detach().numpy(),
-                #                       sent_encoding[j].cpu().detach().numpy())[0, 1]
-                # weight = torch.tensor(pearson).to(torch.float32).to(self.config.device)
-                # ------------------------------------------------------------
-                # 计算kendall系数
-                # kendall = pd.Series(sent_encoding[i].cpu().detach().numpy()).corr(
-                #     pd.Series(sent_encoding[j].cpu().detach().numpy()), method="kendall")
-                # weight = torch.tensor(kendall).to(torch.float32).to(self.config.device)
-                # ------------------------------------------------------------
                 edges_weight.append(weight)
-                # 额外添加一个自循环
-                if i == j:
-                    edges.append((i, j))
-                    edges_weight.append(weight)
+
+                # whether to add another self-loop，这条边有ferature(1.)
+                # if i == j:
+                #     edges.append((i, j))
+                #     edges_weight.append(weight)
+
+        # 必须要先张量化
         edges = torch.tensor(edges)
-        graph = dgl.graph((edges[:, 0], edges[:, 1])).to(self.config.device)
-        # 额外添加一个自循环
+        # 若超出实际长度则产生孤立节点
+        graph = dgl.graph((edges[:, 0], edges[:, 1]), num_nodes=len(sentence_encoding)).to(device)
+
+        # whether to add another self-loop，此时edges的feature为0
         # graph = dgl.add_self_loop(graph)
-        edges_weight = torch.tensor(edges_weight).to(self.config.device)
+
+        edges_weight = torch.tensor(edges_weight).to(device)
         return graph, edges_weight
 
 
@@ -174,7 +159,7 @@ class STWithRSbySPP_DGL(nn.Module):
         sentpres = sentpres.view(batch_n, doc_l, self.hidden_dim * 2)  # sentpres: (batch_n, doc_l, hidden_dim*2)
 
         # sentence embedding的句间注意力
-        sentFt = self.sfLayer(sentpres)  # sentFt:(batch_n, doc_l,15)
+        # sentFt = self.sfLayer(sentpres)  # sentFt:(batch_n, doc_l,15)
         # sentFt = self.dropout(sentFt)
 
         # "add"情况下，将前三个pos位置1：1：1与sentence加和; ['gpos', 'lpos', 'ppos']
@@ -205,35 +190,43 @@ class STWithRSbySPP_DGL(nn.Module):
         #        device='cuda:0')
 
         # 存储每篇文章经过dgl之后的feature
-        sentence_feature = []
+        total_sentence_feature = []
+
         for i in range(len(length_essay)):
             inner_sentennce = tag_out[i]
+            node_length = length_essay[i]
             # build graph
-            graph, edge_weight = self.build_graph(inner_sentennce)
+            graph, edge_weight = self.build_graph(inner_sentennce, node_length, device=device)
 
-            # add different GCN，句间交互
-            for gcn in self.sage_gcns:
-                inner_sentennce = gcn(graph, inner_sentennce, edge_weight)
-                sentence_feature.append(inner_sentennce)
+            current_essay_sentence = []
+            # try add different GCN，句间交互
+            for sage_gcn in self.SAGE_GCN:
+                # 输出：(node_nums, self.sent_dim * 2)
+                inner_sentennce = sage_gcn(graph, inner_sentennce, edge_weight)
+                current_essay_sentence.append(inner_sentennce)
+            # 每篇文章的
+            current_essay_sentence = torch.cat(current_essay_sentence, dim=-1)  # current_essay_sentence:(node_nums, self.sent_dim * 2 * dgl_layer)
+            # 统一一下维度
+            current_essay_sentence = self.transition_layer(current_essay_sentence)  # current_essay_sentence:(node_nums, self.sent_dim * 2)
+            # 加入总体中
+            total_sentence_feature.append(current_essay_sentence)
 
-        # feature_bank = torch.cat(feature_bank, dim=-1)
-        # inner_pred = self.middle_layer(feature_bank)[None, :, :]
+        # 一个batch下的所有文章
+        dgl_out = torch.stack(total_sentence_feature, dim=0)  # total_sentence_feature:(batch_size, node_nums, self.sent_dim * 2)
+
 
         # ----------------------------------------------------------------------
 
 
 
-
-
-
-        roleFt = self.rfLayer(tag_out)  # roleFt:(batch_n, doc_l, 15)
+        # roleFt = self.rfLayer(tag_out)  # roleFt:(batch_n, doc_l, 15)
         # roleFt = self.dropout(roleFt)
 
-        tag_out = torch.cat((tag_out, sentFt, roleFt), dim=2)  # tag_out: (batch_n, doc_l, sent_dim*2+30)  (1,8,286)
+        # tag_out = torch.cat((tag_out, sentFt, roleFt), dim=2)  # tag_out: (batch_n, doc_l, sent_dim*2+30)  (1,8,286)
         # tag_out = self.dropout(tag_out)
 
         # class_n用在了这里
-        result = self.classifier(tag_out)  # tag_out: (batch_n, doc_l, class_n)
+        result = self.classifier(dgl_out)  # tag_out: (batch_n, doc_l, class_n)
 
         # log_softmax 和 nll_loss配套使用
         result = F.log_softmax(result, dim=2)  # result: (batch_n, doc_l, class_n)

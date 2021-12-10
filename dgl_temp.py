@@ -1,4 +1,6 @@
 import dgl
+import dgl.nn.pytorch as dgltor
+import torch
 import torch as th
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -13,14 +15,19 @@ import numpy as np
 # g.edata['w'] = weights  # 将其命名为 'w'
 # g.ndata['x'] = th.ones(g.num_nodes(), 3)
 # g.edata['x'] = th.ones(g.num_edges(), dtype=th.int32)
-# print(g)
-#
 # g.ndata['y'] = th.randn(g.num_nodes(), 5)
+#
 # print(g)
 # print(g.ndata['x'][1])
 # print(g.ndata['y'][1])
 # print(g.edata['x'][th.tensor([0, 3])])  # 获取边0和3的特征
 #
+# bg1 = dgl.to_bidirected(g, copy_ndata=True)
+# print(bg1)
+
+
+
+
 # # 同构图的可视化(异构图不行)
 # nx_g = g.to_networkx().to_undirected()
 # pos = nx.kamada_kawai_layout(nx_g)
@@ -126,4 +133,56 @@ import numpy as np
 
 
 
+# 6、节点相似度
+# input1 = th.randn(2,3)
+# print(input1)
+#
+# in1=input1[0:1, :]
+# in2=input1[1:2, :]
+# print(th.cosine_similarity(in1, in2))
+
+t3=th.tensor([[3, 8, 7, 5, 2, 9], [3, 8, 7, 5, 2, 9]], dtype=torch.float64)
+t4=th.tensor([[1, 8, 6, 6, 4, 5], [3, 8, 7, 5, 2, 9]], dtype=torch.float64)
+t5=th.tensor([[1, 8, 6, 6, 4, 5], [3, 8, 7, 5, 2, 9]], dtype=torch.float64)
+print(t3.shape)
+wang= []
+wang.append(t3)
+wang.append(t4)
+wang.append(t5)
+wang=torch.stack(wang, dim=0)
+print(wang)
+print(wang.shape)
+
+#
+# print(th.cosine_similarity(t3, t4))
+# print(th.cosine_similarity(t5, t4))
+#
+#
+# input1 = torch.randn(100, 128)
+# input2 = torch.randn(100, 128)
+# output = th.cosine_similarity(input1, input2)
+# print(output)
+# print(output.shape)
+
+
+# 7、图中边的添加
+# edges = []
+# edges.append((1,2))
+# edges.append((3,5))
+# edges.append((7,8))
+# print(edges)
+# edges = torch.tensor(edges)
+# print(edges.shape)
+#
+# print((edges[:, 0], edges[:, 1]))
+
+
+# SAGEConv的输出值测试
+# g = dgl.graph(([0,1,2,3,2,5], [1,2,3,4,0,3]))
+# g = dgl.add_self_loop(g)
+# print(g)  # 六个节点，十二条边
+# feat = th.ones(6, 10)
+# conv = dgltor.SAGEConv(10, 2, 'pool')
+# res = conv(g, feat)
+# print(res)
 
