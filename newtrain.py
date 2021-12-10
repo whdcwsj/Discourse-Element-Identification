@@ -13,6 +13,8 @@ import torch.nn.functional as F
 import datetime
 import os
 import logging
+import tqdm
+from tqdm import *
 
 from tensorboardX import SummaryWriter
 import time
@@ -25,7 +27,8 @@ plt.switch_backend('Agg')
 
 currenttime = time.localtime()
 
-model_package_name = 'newbaseline0.6_newstructure1_sent_atten_SPP'
+# model_package_name = 'newbaseline0.6_newstructure1_sent_atten_SPP'
+model_package_name = 'wangwang'
 
 
 # 固定随机数种子
@@ -102,7 +105,7 @@ def train(model, X, Y, FT, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=
 
     last_acc, _ = test(model, X_test, Y_test, ft_test, device, title=title, is_mask=is_mask)
 
-    for epoch in range(epoch_n):
+    for epoch in tqdm(range(epoch_n)):
         total_loss = 0
         gen = utils.batchGenerator(X_train, Y_train, ft_train, batch_n, is_random=True)
         i = 0

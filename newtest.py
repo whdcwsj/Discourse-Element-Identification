@@ -3,6 +3,7 @@ import os
 import torch
 import numpy as np
 import newtrain
+import chinese_train
 import newtrain_en
 import newtrain_en_ft
 import argparse
@@ -106,7 +107,7 @@ def test_all(test, newdir, w_file, data, title=False, is_mask=False):
     if len(data) == 3:
         pad_documents, pad_labels, features = data
     else:
-        pad_documents, pad_labels, features, ctx_vecs = data
+        pad_documents, pad_labels, features, essay_length = data
     with open(w_file, 'w', encoding='utf-8') as wf:
         wf.write(csv_head + '\n')
         filenames = os.listdir(newdir)
@@ -125,7 +126,7 @@ def test_all(test, newdir, w_file, data, title=False, is_mask=False):
                 accuracy, a = test(tag_model, pad_documents, pad_labels, features, 'cpu', batch_n=1, title=title,
                                    is_mask=is_mask)
             else:
-                accuracy, a = test(tag_model, pad_documents, pad_labels, features, ctx_vecs, 'cpu', batch_n=1,
+                accuracy, a = test(tag_model, pad_documents, pad_labels, features, essay_length, 'cpu', batch_n=1,
                                    title=title, is_mask=is_mask)
             print(accuracy)
             print(a)
@@ -159,7 +160,7 @@ def test_all(test, newdir, w_file, data, title=False, is_mask=False):
     return max_accurancy, max_macro_f1
 
 
-def Chinese_test(model_dir, seed):
+def Chinese_test(model_dir, seed, chinese_type_id):
     in_file = './data/Ch_test.json'
     embed_filename = './embd/new_embeddings2.txt'
     title = True
@@ -169,18 +170,34 @@ def Chinese_test(model_dir, seed):
     embed_map, vec_size = utils.loadEmbeddings(embed_filename)
 
     en_documents, en_labels, features, vec_size = utils.getSamplesAndFeatures(in_file, embed_filename, title=title)
-    pad_documents, pad_labels = utils.sentence_padding(en_documents, en_labels, max_len, vec_size)
+
+    if chinese_type_id == 0:
+        pad_documents, pad_labels = utils.sentence_padding(en_documents, en_labels, max_len, vec_size)
+
+    elif chinese_type_id == 3:
+        pad_documents, pad_labels, essay_length = utils.sentence_padding_dgl(en_documents, en_labels, max_len, vec_size)
 
     is_mask = False
 
-    from newtrain import test
-    w_file = './newvalue/cn/' + model_package + '/%s_seed_%d.csv' % (in_file.split('.')[1].split('/')[-1], seed)
+    if chinese_type_id == 0:
+        from newtrain import test
+        w_file = './newvalue/cn/' + model_package + '/%s_seed_%d.csv' % (in_file.split('.')[1].split('/')[-1], seed)
 
-    temp_accurancy, temp_macro_f1 = test_all(test, model_dir, w_file, (pad_documents, pad_labels, features), title, is_mask=is_mask)
-    return temp_accurancy, temp_macro_f1
+        temp_accurancy, temp_macro_f1 = test_all(test, model_dir, w_file, (pad_documents, pad_labels, features), title, is_mask=is_mask)
+
+        return temp_accurancy, temp_macro_f1
+
+    elif chinese_type_id == 3:
+        from chinese_train import test_dgl
+        w_file = './newvalue/cn/' + model_package + '/%s_seed_%d.csv' % (in_file.split('.')[1].split('/')[-1], seed)
+
+        temp_accurancy, temp_macro_f1 = test_all(test_dgl, model_dir, w_file, (pad_documents, pad_labels, features, essay_length), title,
+                                                 is_mask=is_mask)
+
+        return temp_accurancy, temp_macro_f1
 
 
-def new_Chinese_test(model_base_dir, seed):
+def new_Chinese_test(model_base_dir, seed, type_id):
     model_base = model_base_dir
     seed_list = seed
     i = 0
@@ -195,7 +212,7 @@ def new_Chinese_test(model_base_dir, seed):
 
     for model_file in path_list:
         print(model_base+model_file)
-        temp_seed_accu, temp_seed_macro_f1 = Chinese_test(model_base+model_file, seed_list[i])
+        temp_seed_accu, temp_seed_macro_f1 = Chinese_test(model_base+model_file, seed_list[i], type_id)
         accurancy_list.append(temp_seed_accu)
         macro_f1_list.append(temp_seed_macro_f1)
         i = i + 1
@@ -415,7 +432,7 @@ if __name__ == "__main__":
         model_package = newtrain.model_package_name
         model_base_dir = './newmodel/cn/' + model_package + '/'
         list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
-        new_Chinese_test(model_base_dir, list_seed)
+        new_Chinese_test(model_base_dir, list_seed, test_type_id)
 
     elif test_type_id == 1:
         model_package = newtrain_en.model_package_name
@@ -428,6 +445,12 @@ if __name__ == "__main__":
         model_base_dir = './newmodel/enft/' + model_package + '/'
         list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
         new_English_feature_test(model_base_dir, list_seed)
+
+    elif test_type_id == 3:
+        model_package = chinese_train.model_package_name
+        model_base_dir = './newmodel/cn/' + model_package + '/'
+        list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+        new_Chinese_test(model_base_dir, list_seed, test_type_id)
 
 
     # model_dir = './model/roles/st_rs_sppm_128_128_ap_211106182840/'

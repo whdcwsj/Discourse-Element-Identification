@@ -9,37 +9,6 @@ from subLayer import *
 # pytorch里面自定义层也是通过继承自nn.Module类来实现的
 # pytorch里面一般是没有层的概念，层也是当成一个模型来处理的
 
-# class SAGEConv(nn.Module):
-#     Parameters
-#     ----------
-#     in_feats : int, or pair of ints
-#         Input feature size; i.e, the number of dimensions of :math:`h_i^{(l)}`.
-#
-#         SAGEConv can be applied on homogeneous graph and unidirectional
-#         `bipartite graph <https://docs.dgl.ai/generated/dgl.bipartite.html?highlight=bipartite>`__.
-#         If the layer applies on a unidirectional bipartite graph, ``in_feats``
-#         specifies the input feature size on both the source and destination nodes.  If
-#         a scalar is given, the source and destination node feature size would take the
-#         same value.
-#
-#         If aggregator type is ``gcn``, the feature size of source and destination nodes
-#         are required to be the same.
-#     out_feats : int
-#         Output feature size; i.e, the number of dimensions of :math:`h_i^{(l+1)}`.
-#     feat_drop : float
-#         Dropout rate on features, default: ``0``.
-#     aggregator_type : str
-#         Aggregator type to use (``mean``, ``gcn``, ``pool``, ``lstm``).
-#     bias : bool
-#         If True, adds a learnable bias to the output. Default: ``True``.
-#     norm : callable activation function/layer or None, optional
-#         If not None, applies normalization to the updated node features.
-#     activation : callable activation function/layer or None, optional
-#         If not None, applies an activation function to the updated node features.
-#         Default: ``None``.
-
-
-
 # 针对中文数据集
 class STWithRSbySPP_DGL(nn.Module):
     def __init__(self, word_dim, hidden_dim, sent_dim, class_n, p_embd=None, pos_dim=0, p_embd_dim=16,

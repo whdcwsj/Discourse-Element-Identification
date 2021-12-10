@@ -320,7 +320,7 @@ if __name__ == "__main__":
     hidden_dim = 128
     sent_dim = 128
 
-    dgl_layers = 1
+    dgl_layers = 3
 
     p_embd = 'add'
     p_embd_dim = 16
