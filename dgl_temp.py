@@ -144,20 +144,20 @@ import numpy as np
 t3=th.tensor([[3, 8, 7, 5, 2, 9], [3, 8, 7, 5, 2, 9]], dtype=torch.float64)
 t4=th.tensor([[1, 8, 6, 6, 4, 5], [3, 8, 7, 5, 2, 9]], dtype=torch.float64)
 t5=th.tensor([[1, 8, 6, 6, 4, 5], [3, 8, 7, 5, 2, 9]], dtype=torch.float64)
-print(t3.shape)
-wang= []
-wang.append(t3)
-wang.append(t4)
-wang.append(t5)
-wang=torch.stack(wang, dim=0)
-print(wang)
-print(wang.shape)
+# print(t3.shape)
+# wang= []
+# wang.append(t3)
+# wang.append(t4)
+# wang.append(t5)t
+# wang=torch.stack(wang, dim=0)
+# print(wang)
+# print(wang.shape)
 
-#
-# print(th.cosine_similarity(t3, t4))
-# print(th.cosine_similarity(t5, t4))
-#
-#
+
+print(th.cosine_similarity(t3, t4))
+print(th.cosine_similarity(t5, t4))
+
+
 # input1 = torch.randn(100, 128)
 # input2 = torch.randn(100, 128)
 # output = th.cosine_similarity(input1, input2)

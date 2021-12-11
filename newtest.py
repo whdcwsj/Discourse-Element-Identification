@@ -189,7 +189,7 @@ def Chinese_test(model_dir, seed, chinese_type_id):
 
     elif chinese_type_id == 3:
         from chinese_train import test_dgl
-        w_file = './newvalue/cn/' + model_package + '/%s_seed_%d.csv' % (in_file.split('.')[1].split('/')[-1], seed)
+        w_file = './newvalue/cn/dgl/' + model_package + '/%s_seed_%d.csv' % (in_file.split('.')[1].split('/')[-1], seed)
 
         temp_accurancy, temp_macro_f1 = test_all(test_dgl, model_dir, w_file, (pad_documents, pad_labels, features, essay_length), title,
                                                  is_mask=is_mask)
@@ -217,7 +217,10 @@ def new_Chinese_test(model_base_dir, seed, type_id):
         macro_f1_list.append(temp_seed_macro_f1)
         i = i + 1
 
-    summary_file = './newvalue/cn/' + model_package + '/seed_summary.csv'
+    if type_id == 0:
+        summary_file = './newvalue/cn/' + model_package + '/seed_summary.csv'
+    elif type_id == 3:
+        summary_file = './newvalue/cn/dgl/' + model_package + '/seed_summary.csv'
 
     j = 0
     with open(summary_file, 'w', encoding='utf-8') as wf:
@@ -448,8 +451,9 @@ if __name__ == "__main__":
 
     elif test_type_id == 3:
         model_package = chinese_train.model_package_name
-        model_base_dir = './newmodel/cn/' + model_package + '/'
-        list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+        model_base_dir = './newmodel/cn/dgl/' + model_package + '/'
+        # list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+        list_seed = [1]
         new_Chinese_test(model_base_dir, list_seed, test_type_id)
 
 

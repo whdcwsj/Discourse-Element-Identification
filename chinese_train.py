@@ -27,7 +27,7 @@ plt.switch_backend('Agg')
 
 currenttime = time.localtime()
 
-model_package_name = 'dgl0.6_pos2_dgl3_base'
+model_package_name = 'dgl0.6_pos1_dgl3_base_tuning'
 
 
 # 固定随机数种子
@@ -77,7 +77,7 @@ def train(model, X, Y, FT, essay_len, is_gpu=False, epoch_n=10, lr=0.1, batch_n=
     if title:
         modelName += '_t'
 
-    writer = SummaryWriter('./newlog/cn/' +  model_package_name + '/cn_' + modelName + '_' + time.strftime('%m-%d_%H.%M', currenttime))
+    writer = SummaryWriter('./newlog/cn/dgl/' +  model_package_name + '/cn_' + modelName + '_' + time.strftime('%m-%d_%H.%M', currenttime))
 
 
     # 10%的数据作为验证集
@@ -333,7 +333,7 @@ if __name__ == "__main__":
         # 返回大于等于该数值的最小整数
         features = utils.discretePos(features)
 
-    tag_model = STWithRSbySPP_DGL(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
+    tag_model = STWithRSbySPP_DGL_POS1(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
                               pool_type='max_pool', dgl_layer=dgl_layers)
 
     if p_embd == 'embd_b':
@@ -341,14 +341,14 @@ if __name__ == "__main__":
 
 
     # 创建三个文件名
-    if not os.path.exists('./newlog/cn/' + model_package_name):
-        os.mkdir('./newlog/cn/' + model_package_name)
-    if not os.path.exists('./newmodel/cn/' + model_package_name):
-        os.mkdir('./newmodel/cn/' + model_package_name)
-    if not os.path.exists('./newvalue/cn/' + model_package_name):
-        os.mkdir('./newvalue/cn/' + model_package_name)
+    if not os.path.exists('./newlog/cn/dgl/' + model_package_name):
+        os.mkdir('./newlog/cn/dgl/' + model_package_name)
+    if not os.path.exists('./newmodel/cn/dgl/' + model_package_name):
+        os.mkdir('./newmodel/cn/dgl/' + model_package_name)
+    if not os.path.exists('./newvalue/cn/dgl/' + model_package_name):
+        os.mkdir('./newvalue/cn/dgl/' + model_package_name)
 
-    model_dir = './newmodel/cn/' + model_package_name + '/' + tag_model.getModelName() + '-' + time.strftime('%m-%d_%H.%M', currenttime) + '_seed_' + str(args.seed_num) + '/'
+    model_dir = './newmodel/cn/dgl/' + model_package_name + '/' + tag_model.getModelName() + '-' + time.strftime('%m-%d_%H.%M', currenttime) + '_seed_' + str(args.seed_num) + '/'
     if not os.path.isdir(model_dir):
         os.mkdir(model_dir)
 
