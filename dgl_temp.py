@@ -141,9 +141,9 @@ import numpy as np
 # in2=input1[1:2, :]
 # print(th.cosine_similarity(in1, in2))
 
-t3=th.tensor([[3, 8, 7, 5, 2, 9], [3, 8, 7, 5, 2, 9]], dtype=torch.float64)
-t4=th.tensor([[1, 8, 6, 6, 4, 5], [3, 8, 7, 5, 2, 9]], dtype=torch.float64)
-t5=th.tensor([[1, 8, 6, 6, 4, 5], [3, 8, 7, 5, 2, 9]], dtype=torch.float64)
+# t3=th.tensor([[3, 8, 7, 5, 2, 9], [3, 8, 7, 5, 2, 9]], dtype=torch.float64)
+# t4=th.tensor([[1, 8, 6, 6, 4, 5], [3, 8, 7, 5, 2, 9]], dtype=torch.float64)
+# t5=th.tensor([[1, 8, 6, 6, 4, 5], [3, 8, 7, 5, 2, 9]], dtype=torch.float64)
 # print(t3.shape)
 # wang= []
 # wang.append(t3)
@@ -154,8 +154,7 @@ t5=th.tensor([[1, 8, 6, 6, 4, 5], [3, 8, 7, 5, 2, 9]], dtype=torch.float64)
 # print(wang.shape)
 
 
-print(th.cosine_similarity(t3, t4))
-print(th.cosine_similarity(t5, t4))
+
 
 
 # input1 = torch.randn(100, 128)
@@ -177,7 +176,7 @@ print(th.cosine_similarity(t5, t4))
 # print((edges[:, 0], edges[:, 1]))
 
 
-# SAGEConv的输出值测试
+# 8、SAGEConv的输出值测试
 # g = dgl.graph(([0,1,2,3,2,5], [1,2,3,4,0,3]))
 # g = dgl.add_self_loop(g)
 # print(g)  # 六个节点，十二条边
@@ -185,4 +184,37 @@ print(th.cosine_similarity(t5, t4))
 # conv = dgltor.SAGEConv(10, 2, 'pool')
 # res = conv(g, feat)
 # print(res)
+
+
+# 9、节点间的相似度计算方法
+# ------------------------------------------------------------
+# 余弦相似度[-1,1]
+print("余弦")
+t3=th.tensor([[3, 8, 7, 5, 2, 9, 6]], dtype=torch.float)
+t4=th.tensor([[1, 8, 6, 6, 4, 5, 6]], dtype=torch.float)
+t5=th.tensor([[1, 8, 6, 6, 4, 5, 6]], dtype=torch.float)
+print(th.cosine_similarity(t3, t4))
+print(th.cosine_similarity(t5, t4))
+print("------------------------------------------------------------")
+# Pearson 相似度（Pearson Similarity）[-1,1]
+print("pearson相似度")
+pearson1 = np.corrcoef(t3.cpu().detach().numpy(), t4.cpu().detach().numpy())[0][1]
+pearson2 = np.corrcoef(t5.cpu().detach().numpy(), t4.cpu().detach().numpy())[0][1]
+print(pearson1)
+print(pearson2)
+print("------------------------------------------------------------")
+# 计算欧式距离（Euclidean Distance）的相似度
+print("欧氏距离")
+# 其中两个输入的变量为[batch_size,hidden_dim]
+distance1 = th.pairwise_distance(t3[None, :], t4[None, :])
+distance2 = th.pairwise_distance(t5[None, :], t4[None, :])
+print(distance1)
+print(distance2)
+
+# weight = 1 / (1 + distance[0])
+# ------------------------------------------------------------
+# 计算kendall系数
+# kendall = pd.Series(sent_encoding[i].cpu().detach().numpy()).corr(
+#     pd.Series(sent_encoding[j].cpu().detach().numpy()), method="kendall")
+# weight = torch.tensor(kendall).to(torch.float32).to(self.config.device)
 

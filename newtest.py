@@ -126,7 +126,7 @@ def test_all(test, newdir, w_file, data, title=False, is_mask=False):
                 accuracy, a = test(tag_model, pad_documents, pad_labels, features, 'cpu', batch_n=1, title=title,
                                    is_mask=is_mask)
             else:
-                accuracy, a = test(tag_model, pad_documents, pad_labels, features, essay_length, 'cpu', batch_n=1,
+                accuracy, loss, a = test(tag_model, pad_documents, pad_labels, features, essay_length, 'cpu', batch_n=1,
                                    title=title, is_mask=is_mask)
             print(accuracy)
             print(a)
@@ -427,12 +427,14 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Test Discourse', usage='newtest.py [<args>] [-h | --help]')
     parser.add_argument('--type_id', default=0, type=int, help='Set seed num.')
+    parser.add_argument('--model_name', default='dgl0.6_pos1_dgl3_base_tuning_adam', type=str, help='set model_name')
     args = parser.parse_args()
+    model_package = args.model_name
 
     test_type_id = args.type_id
 
     if test_type_id == 0:
-        model_package = newtrain.model_package_name
+        # model_package = newtrain.model_package_name
         model_base_dir = './newmodel/cn/' + model_package + '/'
         list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
         new_Chinese_test(model_base_dir, list_seed, test_type_id)
@@ -450,10 +452,10 @@ if __name__ == "__main__":
         new_English_feature_test(model_base_dir, list_seed)
 
     elif test_type_id == 3:
-        model_package = chinese_train.model_package_name
+        # model_package = chinese_train.model_package_name
         model_base_dir = './newmodel/cn/dgl/' + model_package + '/'
         # list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
-        list_seed = [1]
+        list_seed = [1, 100]
         new_Chinese_test(model_base_dir, list_seed, test_type_id)
 
 

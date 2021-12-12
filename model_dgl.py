@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import dgl
 import dgl.nn.pytorch as dgltor
+import numpy as np
 
 from subLayer import *
 
@@ -221,7 +222,7 @@ class STWithRSbySPP_DGL(nn.Module):
 # 将DGL放在pos1位置
 class STWithRSbySPP_DGL_POS1(nn.Module):
     def __init__(self, word_dim, hidden_dim, sent_dim, class_n, p_embd=None, pos_dim=0, p_embd_dim=16,
-                 pool_type='max_pool', dgl_layer=1):
+                 pool_type='max_pool', dgl_layer=1, gcn_aggr='gcn', weight_id=1):
         # p_embd: 'cat', 'add','embd', 'embd_a'
         super(STWithRSbySPP_DGL_POS1, self).__init__()
         self.word_dim = word_dim
@@ -261,10 +262,12 @@ class STWithRSbySPP_DGL_POS1(nn.Module):
         else:
             self.tagLayer = nn.LSTM(self.hidden_dim * 2, self.sent_dim, bidirectional=True)
 
+        self.edge_weight_id = weight_id
+
         # 是否添加norm，后续需要进行尝试:'right'或者'none',default='both'
         # gcn 聚合可以理解为周围所有的邻居结合和当前节点的均值
         self.SAGE_GCN = nn.ModuleList(
-            [dgltor.SAGEConv(self.sent_dim * 2, self.sent_dim * 2, aggregator_type='gcn', feat_drop=0.1, bias=True, activation=nn.ReLU())
+            [dgltor.SAGEConv(self.sent_dim * 2, self.sent_dim * 2, aggregator_type=gcn_aggr, feat_drop=0.1, bias=True, activation=nn.ReLU())
              for _ in range(dgl_layer)])
 
         self.transition_layer = nn.Sequential(
@@ -295,9 +298,15 @@ class STWithRSbySPP_DGL_POS1(nn.Module):
             for j in range(nodes_num):
                 # 构建双向图(自循环已经考虑进去了)
                 edges.append((i, j))
-                # 计算余弦相似度
-                weight = torch.cosine_similarity(sentence_encoding[i], sentence_encoding[j], dim=0)
-                edges_weight.append(weight)
+
+                if self.edge_weight_id == 1:
+                    # 计算余弦相似度
+                    weight = torch.cosine_similarity(sentence_encoding[i], sentence_encoding[j], dim=0)
+                    edges_weight.append(weight)
+                elif self.edge_weight_id == 2:
+                    pearson = np.corrcoef(sentence_encoding[i].cpu().detach().numpy(), sentence_encoding[j].cpu().detach().numpy())[0][1]
+                    weight = torch.tensor(pearson, dtype=torch.float).to(device)
+                    edges_weight.append(weight)
 
                 # whether to add another self-loop，这条边有ferature(1.)
                 # if i == j:

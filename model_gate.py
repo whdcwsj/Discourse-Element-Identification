@@ -249,7 +249,7 @@ class STWithRSbySPP_NewStructure1(nn.Module):
         pre_pred = self.dropout(pre_pred)
 
         # 原先的
-        new_output = torch.cat((pre_pred, sentFt, roleFt), dim=2)  # tag_out: (batch_n, doc_l, sent_dim*2+30)  (1,8,286)
+        new_tagput = torch.cat((pre_pred, sentFt, roleFt), dim=2)  # tag_out: (batch_n, doc_l, sent_dim*2+30)  (1,8,286)
 
         # gate1
         # 相当于双线性层输出
@@ -262,7 +262,7 @@ class STWithRSbySPP_NewStructure1(nn.Module):
         # new_value = gamma * sentFt + (1 - gamma) * roleFt
         # new_tag_out = torch.cat((tag_out, new_value), dim=2)
 
-        result = self.classifier(new_output)  # tag_out: (batch_n, doc_l, class_n)
+        result = self.classifier(new_tagput)  # tag_out: (batch_n, doc_l, class_n)
 
         result = F.log_softmax(result, dim=2)  # result: (batch_n, doc_l, class_n)
         return result

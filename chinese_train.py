@@ -27,15 +27,16 @@ plt.switch_backend('Agg')
 
 currenttime = time.localtime()
 
-model_package_name = 'dgl0.6_pos1_dgl3_base_tuning'
+
+# model_package_name = 'dgl0.6_pos1_dgl3_base_tuning'
 
 
 # 固定随机数种子
 def seed_torch(seed=1):
     os.environ['PYTHONHASHSEED'] = str(seed)  # 为了禁止hash随机化，使得实验可复现
     np.random.seed(seed)
-    torch.manual_seed(seed)   # 为CPU设置随机种子
-    torch.cuda.manual_seed(seed)   # 为当前GPU设置随机种子
+    torch.manual_seed(seed)  # 为CPU设置随机种子
+    torch.cuda.manual_seed(seed)  # 为当前GPU设置随机种子
     torch.cuda.manual_seed_all(seed)  # if you are using multi-GPU，为所有GPU设置随机种子
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
@@ -71,17 +72,18 @@ def getMask(ft, device='cpu'):
 # tag_model, pad_documents, pad_labels, features
 # model，X=按照max_len长度进行处理的句子的embedding，Y=每个句子对应的label列表，FT=每个行数据的每个句子的按顺序对应的六个特征
 # title=True，is_mask=False
-def train(model, X, Y, FT, essay_len, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=False, is_mask=False):
-
+def train(model, X, Y, FT, essay_len, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=False, is_mask=False, optimizer_type=1):
     modelName = model.getModelName()
     if title:
         modelName += '_t'
 
-    writer = SummaryWriter('./newlog/cn/dgl/' +  model_package_name + '/cn_' + modelName + '_' + time.strftime('%m-%d_%H.%M', currenttime))
-
+    writer = SummaryWriter(
+        './newlog/cn/dgl/' + model_package_name + '/cn_' + modelName + '_' + time.strftime('%m-%d_%H.%M', currenttime))
 
     # 10%的数据作为验证集
-    X_train, Y_train, ft_train, essay_len_train, X_test, Y_test, ft_test, essay_len_test = utils.dataSplit_dgl(X, Y, FT, essay_len, 0.1)
+    X_train, Y_train, ft_train, essay_len_train, X_test, Y_test, ft_test, essay_len_test = utils.dataSplit_dgl(X, Y, FT,
+                                                                                                               essay_len,
+                                                                                                               0.1)
 
     if (is_gpu):
         model.cuda()
@@ -92,7 +94,11 @@ def train(model, X, Y, FT, essay_len, is_gpu=False, epoch_n=10, lr=0.1, batch_n=
 
     loss_function = nn.NLLLoss()
 
-    optimizer = optim.SGD(model.parameters(), lr=lr)
+    if optimizer_type == 1:
+        optimizer = optim.Adam(model.parameters(), lr=1e-3)
+        # adam最优学习率为3e - 4
+    elif optimizer_type == 2:
+        optimizer = optim.SGD(model.parameters(), lr=lr)
 
     # optimizer = ChildTuningOptimizer.ChildTuningAdamW(model.parameters(), lr=lr)
 
@@ -102,11 +108,11 @@ def train(model, X, Y, FT, essay_len, is_gpu=False, epoch_n=10, lr=0.1, batch_n=
     c = 0
     best_epoch = -1
 
-    last_acc, _ = test_dgl(model, X_test, Y_test, ft_test, essay_len_test, device, title=title, is_mask=is_mask)
+    last_acc, _, _ = test_dgl(model, X_test, Y_test, ft_test, essay_len_test, device, title=title, is_mask=is_mask)
 
     for epoch in tqdm(range(epoch_n)):
         total_loss = 0
-        gen = utils.batchGenerator_dgl(X_train, Y_train, ft_train,  essay_len_train, batch_n, is_random=True)
+        gen = utils.batchGenerator_dgl(X_train, Y_train, ft_train, essay_len_train, batch_n, is_random=True)
         i = 0
         model.train()
         for x, y, ft, e_len in gen:
@@ -117,7 +123,8 @@ def train(model, X, Y, FT, essay_len, is_gpu=False, epoch_n=10, lr=0.1, batch_n=
 
             optimizer.zero_grad()  # 将梯度归零
 
-            inputs, labels, tp, e_length = list2tensor_dgl(x, y, ft, e_len, model.p_embd, device)  # inputs:(50,34,40,200)
+            inputs, labels, tp, e_length = list2tensor_dgl(x, y, ft, e_len, model.p_embd,
+                                                           device)  # inputs:(50,34,40,200)
 
             if is_mask:
                 mask = getMask(ft, device)
@@ -125,7 +132,8 @@ def train(model, X, Y, FT, essay_len, is_gpu=False, epoch_n=10, lr=0.1, batch_n=
                 mask = None
 
             if title:
-                result = model(inputs, pos=tp, length_essay=e_length, device=device, mask=mask)[:, 1:].contiguous()  # result: (batch_n, doc_l-1, class_n)
+                result = model(inputs, pos=tp, length_essay=e_length, device=device, mask=mask)[:,
+                         1:].contiguous()  # result: (batch_n, doc_l-1, class_n)
                 labels = labels[:, 1:].contiguous()
             else:
                 result = model(inputs, pos=tp, length_essay=e_length, device=device, mask=mask)
@@ -144,10 +152,12 @@ def train(model, X, Y, FT, essay_len, is_gpu=False, epoch_n=10, lr=0.1, batch_n=
         aver_loss = total_loss / i
         loss_list.append(aver_loss)
 
-        accuracy, _ = test_dgl(model, X_test, Y_test, ft_test, essay_len_test, device, title=title, is_mask=is_mask)
+        accuracy, dev_aver_loss, _ = test_dgl(model, X_test, Y_test, ft_test, essay_len_test, device, title=title,
+                                              is_mask=is_mask)
         acc_list.append(accuracy)
 
         writer.add_scalar("loss/train", aver_loss, epoch)
+        writer.add_scalar("loss/dev", dev_aver_loss, epoch)
         writer.add_scalar("performance/accuracy", accuracy, epoch)
 
         if last_acc < accuracy:
@@ -160,7 +170,6 @@ def train(model, X, Y, FT, essay_len, is_gpu=False, epoch_n=10, lr=0.1, batch_n=
                 torch.save(model, model_dir + '%s_top.pk' % modelName)
                 best_epoch = epoch
 
-
         if (aver_loss > last_loss):
             c += 1
             if c == 10:
@@ -172,8 +181,9 @@ def train(model, X, Y, FT, essay_len, is_gpu=False, epoch_n=10, lr=0.1, batch_n=
             last_loss = aver_loss
         torch.save(model, model_dir + '%s_last.pk' % (modelName))
 
-        if (lr < 0.0001) or (aver_loss < 0.5):
-            break
+        if optimizer_type == 2:
+            if (lr < 0.0001) or (aver_loss < 0.5):
+               break
 
     if best_epoch == -1:
         pass
@@ -194,9 +204,12 @@ def train(model, X, Y, FT, essay_len, is_gpu=False, epoch_n=10, lr=0.1, batch_n=
 # 训练集数据的10%，作为验证集
 # X=按照max_len长度进行处理的句子的embedding，Y=每个句子对应的label列表，FT=每个行数据的每个句子的按顺序对应的六个特征
 def test_dgl(model, X, Y, FT, essay_len, device='cpu', batch_n=1, title=False, is_mask=False):
+    loss_function = nn.NLLLoss()
     result_list = []
     label_list = []
     model.eval()
+    total_loss = 0
+    i = 0
     with torch.no_grad():
         # 返回：b_docs, b_labs, b_ft
         # 有一定排序的，先短后长
@@ -230,7 +243,8 @@ def test_dgl(model, X, Y, FT, essay_len, device='cpu', batch_n=1, title=False, i
                 # 2 维度变换后的变量是之前变量的浅拷贝，指向同一区域，即view操作会连带原来的变量一同变形，这是不合法的，所以也会报错；
                 # ---- 这个解释有部分道理，也即contiguous返回了tensor的深拷贝contiguous copy数据；
 
-                result = model(inputs, pos=tp, length_essay=e_length, device=device, mask=mask)[:, 1:].contiguous()  # result: (batch_n, doc_l, class_n)
+                result = model(inputs, pos=tp, length_essay=e_length, device=device, mask=mask)[:,
+                         1:].contiguous()  # result: (batch_n, doc_l, class_n)
                 # (1,7)
                 labels = labels[:, 1:].contiguous()  # labels:(batch_n, doc_l-(title))
             else:
@@ -242,8 +256,14 @@ def test_dgl(model, X, Y, FT, essay_len, device='cpu', batch_n=1, title=False, i
             # label变成一维的
             labels = labels.view(r_n)
 
+            loss = loss_function(result, labels)
+            total_loss += loss.cpu().detach().numpy()
+            i += 1
+
             result_list.append(result)
             label_list.append(labels)
+
+    aver_loss = total_loss / i
 
     preds = torch.cat(result_list)  # preds:(2866,8)
     labels = torch.cat(label_list)  # labels:(2866,)
@@ -270,7 +290,7 @@ def test_dgl(model, X, Y, FT, essay_len, device='cpu', batch_n=1, title=False, i
     #  [   0.    0.    0.    0.    0. 1124.    0.    0.]
     #  [   0.    0.    0.    0.    0.    0.    0.    0.]]
 
-    return accuracy, a
+    return accuracy, aver_loss, a
 
 
 # def predict(model, x, ft, device='cpu', title=False):
@@ -288,10 +308,27 @@ def test_dgl(model, X, Y, FT, essay_len, device='cpu', batch_n=1, title=False, i
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Chinese Discourse', usage='newtrain.py [<args>] [-h | --help]')
-    parser.add_argument('--seed_num', default=1, type=int, help='Set seed num.')
+    parser.add_argument('--model_name', default='dgl0.6_pos1_dgl3_base_tuning_adam_without0.5', type=str, help='set model_name')
+    parser.add_argument('--seed_num', default=1, type=int, help='set seed_num')
+    parser.add_argument('--epoch', default=300, type=int, help='set epoch_num')
+    parser.add_argument('--optimizer_id', default=1, type=int, help='set optim_type')
+    # 1:Adam(速度快)，2:SGD(速度很慢，尤其是加了GCN之后)
+    parser.add_argument('--learning_rate', default=0.2, type=float, help='set learning_rate')
+    parser.add_argument('--gcn_aggregator_type', default='gcn', type=str, help='set aggregator_type')
+    # 'gcn','lstm','pool','mean'
+    parser.add_argument('--weight_define', default=1, type=int, help='set how to sefine weight between nodes')
+    # 1:余弦相似度，2:Pearson相似度，3:
+
+
+
+
     args = parser.parse_args()
 
     seed_torch(args.seed_num)
+
+    model_package_name = args.model_name
+    gcn_aggregator = args.gcn_aggregator_type
+    gcn_weight_id = args.weight_define
 
     in_file = './data/Ch_train.json'
 
@@ -334,11 +371,11 @@ if __name__ == "__main__":
         features = utils.discretePos(features)
 
     tag_model = STWithRSbySPP_DGL_POS1(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
-                              pool_type='max_pool', dgl_layer=dgl_layers)
+                                       pool_type='max_pool', dgl_layer=dgl_layers, gcn_aggr=gcn_aggregator,
+                                       weight_id=gcn_weight_id)
 
     if p_embd == 'embd_b':
         tag_model.posLayer.init_embedding()
-
 
     # 创建三个文件名
     if not os.path.exists('./newlog/cn/dgl/' + model_package_name):
@@ -348,14 +385,15 @@ if __name__ == "__main__":
     if not os.path.exists('./newvalue/cn/dgl/' + model_package_name):
         os.mkdir('./newvalue/cn/dgl/' + model_package_name)
 
-    model_dir = './newmodel/cn/dgl/' + model_package_name + '/' + tag_model.getModelName() + '-' + time.strftime('%m-%d_%H.%M', currenttime) + '_seed_' + str(args.seed_num) + '/'
+    model_dir = './newmodel/cn/dgl/' + model_package_name + '/' + tag_model.getModelName() + '-' + time.strftime(
+        '%m-%d_%H.%M', currenttime) + '_seed_' + str(args.seed_num) + '/'
     if not os.path.isdir(model_dir):
         os.mkdir(model_dir)
 
     print("start Chinese model training")
     starttime = datetime.datetime.now()
-    train(tag_model, pad_documents, pad_labels, features, essay_length, is_gpu, epoch_n=700, lr=0.2, batch_n=batch_n, title=title,
-          is_mask=is_mask)
+    train(tag_model, pad_documents, pad_labels, features, essay_length, is_gpu, epoch_n=args.epoch,
+          lr=args.learning_rate, batch_n=batch_n, title=title, is_mask=is_mask, optimizer_type=args.optimizer_id)
     endtime = datetime.datetime.now()
     print("本次seed为%d的训练耗时：" % int(args.seed_num))
     print(endtime - starttime)

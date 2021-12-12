@@ -28,7 +28,6 @@ plt.switch_backend('Agg')
 currenttime = time.localtime()
 
 # model_package_name = 'newbaseline0.6_newstructure1_sent_atten_SPP'
-model_package_name = 'wangwang'
 
 
 # 固定随机数种子
