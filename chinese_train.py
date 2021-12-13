@@ -316,8 +316,10 @@ if __name__ == "__main__":
     parser.add_argument('--learning_rate', default=0.2, type=float, help='set learning rate')
     parser.add_argument('--gcn_aggregator_type', default='gcn', type=str, help='set aggregator type of gcn')
     # 'gcn','lstm','pool','mean'
-    parser.add_argument('--weight_define', default=3, type=int, help='set how to define weight between nodes')
+    parser.add_argument('--weight_define', default=1, type=int, help='set how to define weight between nodes')
     # 1:余弦相似度，2:Pearson相似度，3:欧氏距离，4:kendall系数，
+    parser.add_argument('--add_self_loop', default=0, type=int, help='whether to add self-loop in dgl')
+    # 默认不添加self-loop
 
     args = parser.parse_args()
 
@@ -375,13 +377,15 @@ if __name__ == "__main__":
         tag_model = STWithRSbySPP_DGL_POS1(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd,
                                            p_embd_dim=p_embd_dim,
                                            pool_type='max_pool', dgl_layer=dgl_layers, gcn_aggr=gcn_aggregator,
-                                           weight_id=gcn_weight_id)
+                                           weight_id=gcn_weight_id,
+                                           loop=args.add_self_loop)
     elif args.model_type == 2:
         # 对原始的sentence_embeeding先进行DGL，剩下的三部分均在此基础上进行
         tag_model = STWithRSbySPP_DGL_POS_Bottom(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd,
                                                  p_embd_dim=p_embd_dim,
                                                  pool_type='max_pool', dgl_layer=dgl_layers, gcn_aggr=gcn_aggregator,
-                                                 weight_id=gcn_weight_id)
+                                                 weight_id=gcn_weight_id,
+                                                 loop=args.add_self_loop)
 
     if p_embd == 'embd_b':
         tag_model.posLayer.init_embedding()
