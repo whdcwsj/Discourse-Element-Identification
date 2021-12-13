@@ -29,6 +29,7 @@ currenttime = time.localtime()
 
 
 # model_package_name = 'dgl0.6_pos1_dgl3_base_tuning'
+# dgl0.6_pos1_dgl3_base_tuning_adam_without0.5
 
 
 # 固定随机数种子
@@ -72,7 +73,7 @@ def getMask(ft, device='cpu'):
 # tag_model, pad_documents, pad_labels, features
 # model，X=按照max_len长度进行处理的句子的embedding，Y=每个句子对应的label列表，FT=每个行数据的每个句子的按顺序对应的六个特征
 # title=True，is_mask=False
-def train(model, X, Y, FT, essay_len, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=False, is_mask=False, optimizer_type=1):
+def train(model, X, Y, FT, essay_len, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=False, is_mask=False):
     modelName = model.getModelName()
     if title:
         modelName += '_t'
@@ -94,11 +95,10 @@ def train(model, X, Y, FT, essay_len, is_gpu=False, epoch_n=10, lr=0.1, batch_n=
 
     loss_function = nn.NLLLoss()
 
-    if optimizer_type == 1:
-        optimizer = optim.Adam(model.parameters(), lr=1e-3)
-        # adam最优学习率为3e - 4
-    elif optimizer_type == 2:
-        optimizer = optim.SGD(model.parameters(), lr=lr)
+    # optimizer = optim.Adam(model.parameters(), lr=1e-3)
+    # adam最优学习率为3e - 4
+
+    optimizer = optim.SGD(model.parameters(), lr=lr)
 
     # optimizer = ChildTuningOptimizer.ChildTuningAdamW(model.parameters(), lr=lr)
 
@@ -181,9 +181,8 @@ def train(model, X, Y, FT, essay_len, is_gpu=False, epoch_n=10, lr=0.1, batch_n=
             last_loss = aver_loss
         torch.save(model, model_dir + '%s_last.pk' % (modelName))
 
-        if optimizer_type == 2:
-            if (lr < 0.0001) or (aver_loss < 0.5):
-               break
+        if (lr < 0.0001) or (aver_loss < 0.5):
+            break
 
     if best_epoch == -1:
         pass
@@ -308,16 +307,14 @@ def test_dgl(model, X, Y, FT, essay_len, device='cpu', batch_n=1, title=False, i
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Chinese Discourse', usage='newtrain.py [<args>] [-h | --help]')
-    parser.add_argument('--model_name', default='dgl0.6_pos1_dgl3_base_tuning_adam_without0.5', type=str, help='set model_name')
+    parser.add_argument('--model_name', default='wsj', type=str, help='set model_name')
     parser.add_argument('--seed_num', default=1, type=int, help='set seed_num')
-    parser.add_argument('--epoch', default=300, type=int, help='set epoch_num')
-    parser.add_argument('--optimizer_id', default=1, type=int, help='set optim_type')
-    # 1:Adam(速度快)，2:SGD(速度很慢，尤其是加了GCN之后)
+    parser.add_argument('--epoch', default=700, type=int, help='set epoch_num')
     parser.add_argument('--learning_rate', default=0.2, type=float, help='set learning_rate')
     parser.add_argument('--gcn_aggregator_type', default='gcn', type=str, help='set aggregator_type')
     # 'gcn','lstm','pool','mean'
-    parser.add_argument('--weight_define', default=1, type=int, help='set how to sefine weight between nodes')
-    # 1:余弦相似度，2:Pearson相似度，3:
+    parser.add_argument('--weight_define', default=3, type=int, help='set how to sefine weight between nodes')
+    # 1:余弦相似度，2:Pearson相似度，3:欧氏距离，4:kendall系数，
 
 
 
@@ -393,7 +390,7 @@ if __name__ == "__main__":
     print("start Chinese model training")
     starttime = datetime.datetime.now()
     train(tag_model, pad_documents, pad_labels, features, essay_length, is_gpu, epoch_n=args.epoch,
-          lr=args.learning_rate, batch_n=batch_n, title=title, is_mask=is_mask, optimizer_type=args.optimizer_id)
+          lr=args.learning_rate, batch_n=batch_n, title=title, is_mask=is_mask)
     endtime = datetime.datetime.now()
     print("本次seed为%d的训练耗时：" % int(args.seed_num))
     print(endtime - starttime)

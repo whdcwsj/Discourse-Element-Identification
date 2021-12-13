@@ -427,7 +427,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Test Discourse', usage='newtest.py [<args>] [-h | --help]')
     parser.add_argument('--type_id', default=0, type=int, help='Set seed num.')
-    parser.add_argument('--model_name', default='dgl0.6_pos1_dgl3_base_tuning_adam', type=str, help='set model_name')
+    parser.add_argument('--model_name', default='baseline_0.6_adam_all', type=str, help='set model_name')
     args = parser.parse_args()
     model_package = args.model_name
 
@@ -436,7 +436,8 @@ if __name__ == "__main__":
     if test_type_id == 0:
         # model_package = newtrain.model_package_name
         model_base_dir = './newmodel/cn/' + model_package + '/'
-        list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+        # list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+        list_seed = [1, 100]
         new_Chinese_test(model_base_dir, list_seed, test_type_id)
 
     elif test_type_id == 1:

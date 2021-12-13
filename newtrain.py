@@ -27,7 +27,7 @@ plt.switch_backend('Agg')
 
 currenttime = time.localtime()
 
-# model_package_name = 'newbaseline0.6_newstructure1_sent_atten_SPP'
+model_package_name = 'baseline_0.6_adam_all'
 
 
 # 固定随机数种子
@@ -92,7 +92,8 @@ def train(model, X, Y, FT, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=
 
     loss_function = nn.NLLLoss()
 
-    optimizer = optim.SGD(model.parameters(), lr=lr)
+    # optimizer = optim.SGD(model.parameters(), lr=lr)
+    optimizer = optim.Adam(model.parameters(), lr=3e-4)
 
     # optimizer = ChildTuningOptimizer.ChildTuningAdamW(model.parameters(), lr=lr)
 
@@ -102,7 +103,7 @@ def train(model, X, Y, FT, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=
     c = 0
     best_epoch = -1
 
-    last_acc, _ = test(model, X_test, Y_test, ft_test, device, title=title, is_mask=is_mask)
+    last_acc, _, _= test(model, X_test, Y_test, ft_test, device, title=title, is_mask=is_mask)
 
     for epoch in tqdm(range(epoch_n)):
         total_loss = 0
@@ -139,10 +140,11 @@ def train(model, X, Y, FT, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=
         aver_loss = total_loss / i
         loss_list.append(aver_loss)
 
-        accuracy, _ = test(model, X_test, Y_test, ft_test, device, title=title, is_mask=is_mask)
+        accuracy, dev_aver_loss, _ = test(model, X_test, Y_test, ft_test, device, title=title, is_mask=is_mask)
         acc_list.append(accuracy)
 
         writer.add_scalar("loss/train", aver_loss, epoch)
+        writer.add_scalar("loss/dev", dev_aver_loss, epoch)
         writer.add_scalar("performance/accuracy", accuracy, epoch)
 
         if last_acc < accuracy:
@@ -155,20 +157,20 @@ def train(model, X, Y, FT, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=
                 torch.save(model, model_dir + '%s_top.pk' % modelName)
                 best_epoch = epoch
 
+        # if (aver_loss > last_loss):
+        #     c += 1
+        #     if c == 10:
+        #         lr = lr * 0.95
+        #         optimizer.param_groups[0]['lr'] = lr
+        #         c = 0
+        # else:
+        #     c = 0
+        #     last_loss = aver_loss
 
-        if (aver_loss > last_loss):
-            c += 1
-            if c == 10:
-                lr = lr * 0.95
-                optimizer.param_groups[0]['lr'] = lr
-                c = 0
-        else:
-            c = 0
-            last_loss = aver_loss
         torch.save(model, model_dir + '%s_last.pk' % (modelName))
 
-        if (lr < 0.0001) or (aver_loss < 0.5):
-            break
+        # if (lr < 0.0001) or (aver_loss < 0.5):
+        #     break
 
     # 若无最佳模型，跳过该步骤
     if best_epoch == -1:
@@ -190,9 +192,12 @@ def train(model, X, Y, FT, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=
 # 训练集数据的10%，作为验证集
 # X=按照max_len长度进行处理的句子的embedding，Y=每个句子对应的label列表，FT=每个行数据的每个句子的按顺序对应的六个特征
 def test(model, X, Y, FT, device='cpu', batch_n=1, title=False, is_mask=False):
+    loss_function = nn.NLLLoss()
     result_list = []
     label_list = []
     model.eval()
+    total_loss = 0
+    i = 0
     with torch.no_grad():
         # 返回：b_docs, b_labs, b_ft
         # 有一定排序的，先短后长
@@ -242,8 +247,14 @@ def test(model, X, Y, FT, device='cpu', batch_n=1, title=False, is_mask=False):
             # label变成一维的
             labels = labels.view(r_n)
 
+            loss = loss_function(result, labels)
+            total_loss += loss.cpu().detach().numpy()
+            i += 1
+
             result_list.append(result)
             label_list.append(labels)
+
+    aver_loss = total_loss / i
 
     preds = torch.cat(result_list)  # preds:(2866,8)
     labels = torch.cat(label_list)  # labels:(2866,)
@@ -270,7 +281,7 @@ def test(model, X, Y, FT, device='cpu', batch_n=1, title=False, is_mask=False):
     #  [   0.    0.    0.    0.    0. 1124.    0.    0.]
     #  [   0.    0.    0.    0.    0.    0.    0.    0.]]
 
-    return accuracy, a
+    return accuracy, aver_loss, a
 
 
 def predict(model, x, ft, device='cpu', title=False):
@@ -332,11 +343,11 @@ if __name__ == "__main__":
         features = utils.discretePos(features)
 
     # sent_dim用于设置每个句子的维度
-    # tag_model = STWithRSbySPP(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
-    #                           pool_type='max_pool')
-
-    tag_model = STWithRSbySPP_NewStructure1(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
+    tag_model = STWithRSbySPP(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
                               pool_type='max_pool')
+
+    # tag_model = STWithRSbySPP_NewStructure1(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
+    #                           pool_type='max_pool')
 
     if p_embd == 'embd_b':
         tag_model.posLayer.init_embedding()
@@ -356,7 +367,7 @@ if __name__ == "__main__":
 
     print("start Chinese model training")
     starttime = datetime.datetime.now()
-    train(tag_model, pad_documents, pad_labels, features, is_gpu, epoch_n=700, lr=0.2, batch_n=batch_n, title=title,
+    train(tag_model, pad_documents, pad_labels, features, is_gpu, epoch_n=400, lr=0.2, batch_n=batch_n, title=title,
           is_mask=is_mask)
     endtime = datetime.datetime.now()
     print("本次seed为%d的训练耗时：" % int(args.seed_num))

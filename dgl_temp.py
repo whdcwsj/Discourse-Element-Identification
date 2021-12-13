@@ -190,31 +190,44 @@ import numpy as np
 # ------------------------------------------------------------
 # 余弦相似度[-1,1]
 print("余弦")
-t3=th.tensor([[3, 8, 7, 5, 2, 9, 6]], dtype=torch.float)
-t4=th.tensor([[1, 8, 6, 6, 4, 5, 6]], dtype=torch.float)
-t5=th.tensor([[1, 8, 6, 6, 4, 5, 6]], dtype=torch.float)
-print(th.cosine_similarity(t3, t4))
-print(th.cosine_similarity(t5, t4))
+t3=th.tensor([3, 8, 7, 5, 2, 9, 6], dtype=torch.float)
+t4=th.tensor([1, 8, 6, 6, 4, 5, 6], dtype=torch.float)
+t5=th.tensor([1, 8, 6, 6, 4, 5, 6], dtype=torch.float)
+print(t3.shape)
+print(th.cosine_similarity(t3, t4, dim=0))
+print(th.cosine_similarity(t5, t4, dim=0))
 print("------------------------------------------------------------")
 # Pearson 相似度（Pearson Similarity）[-1,1]
 print("pearson相似度")
 pearson1 = np.corrcoef(t3.cpu().detach().numpy(), t4.cpu().detach().numpy())[0][1]
 pearson2 = np.corrcoef(t5.cpu().detach().numpy(), t4.cpu().detach().numpy())[0][1]
-print(pearson1)
-print(pearson2)
+weight1 = torch.tensor(pearson1, dtype=torch.float)
+weight2 = torch.tensor(pearson2, dtype=torch.float)
+print(weight1)
+print(weight2)
 print("------------------------------------------------------------")
 # 计算欧式距离（Euclidean Distance）的相似度
 print("欧氏距离")
-# 其中两个输入的变量为[batch_size,hidden_dim]
+# 输入:(N,D)其中D等于向量的维度
+# 输出:(N,1)
+# 距离越大，权重越小，作为分母的时候，补一个1
 distance1 = th.pairwise_distance(t3[None, :], t4[None, :])
 distance2 = th.pairwise_distance(t5[None, :], t4[None, :])
-print(distance1)
-print(distance2)
-
-# weight = 1 / (1 + distance[0])
-# ------------------------------------------------------------
+print(distance1[0])
+print(distance2[0])
+weight1 = 1 / (1 + distance1[0])
+weight2 = 1 / (1 + distance2[0])
+print(weight1)
+print(weight2)
+print("------------------------------------------------------------")
+# 统计学三大相关系数
 # 计算kendall系数
-# kendall = pd.Series(sent_encoding[i].cpu().detach().numpy()).corr(
-#     pd.Series(sent_encoding[j].cpu().detach().numpy()), method="kendall")
-# weight = torch.tensor(kendall).to(torch.float32).to(self.config.device)
+print("kendall系数")
+kendall1 = pd.Series(t3.cpu().detach().numpy()).corr(pd.Series(t4.cpu().detach().numpy()), method="kendall")
+kendall2 = pd.Series(t5.cpu().detach().numpy()).corr(pd.Series(t4.cpu().detach().numpy()), method="kendall")
+weight1 = torch.tensor(kendall1)
+weight2 = torch.tensor(kendall2)
+print(weight1)
+print(weight2)
 
+# Dice这种求交、并、补、差的集合，暂时不纳入考虑

@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import dgl
 import dgl.nn.pytorch as dgltor
 import numpy as np
+import pandas as pd
 
 from subLayer import *
 
@@ -299,13 +300,25 @@ class STWithRSbySPP_DGL_POS1(nn.Module):
                 # 构建双向图(自循环已经考虑进去了)
                 edges.append((i, j))
 
+                # 计算余弦相似度
                 if self.edge_weight_id == 1:
-                    # 计算余弦相似度
                     weight = torch.cosine_similarity(sentence_encoding[i], sentence_encoding[j], dim=0)
                     edges_weight.append(weight)
+                # Pearson相似度
                 elif self.edge_weight_id == 2:
                     pearson = np.corrcoef(sentence_encoding[i].cpu().detach().numpy(), sentence_encoding[j].cpu().detach().numpy())[0][1]
                     weight = torch.tensor(pearson, dtype=torch.float).to(device)
+                    edges_weight.append(weight)
+                # 欧氏距离，1/分母作为权重
+                elif self.edge_weight_id == 3:
+                    distance = torch.pairwise_distance(sentence_encoding[i][None, :], sentence_encoding[j][None, :])
+                    weight = 1 / (1 + distance[0])
+                    edges_weight.append(weight)
+                # kendall系数
+                elif self.edge_weight_id == 4:
+                    kendall = pd.Series(sentence_encoding[i].cpu().detach().numpy()).corr(
+                        pd.Series(sentence_encoding[j].cpu().detach().numpy()), method="kendall")
+                    weight = torch.tensor(kendall, dtype=torch.float).to(device)
                     edges_weight.append(weight)
 
                 # whether to add another self-loop，这条边有ferature(1.)
