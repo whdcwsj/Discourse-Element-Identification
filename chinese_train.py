@@ -96,7 +96,8 @@ def train(model, X, Y, FT, essay_len, is_gpu=False, epoch_n=10, lr=0.1, batch_n=
     loss_function = nn.NLLLoss()
 
     # optimizer = optim.Adam(model.parameters(), lr=1e-3)
-    # adam最优学习率为3e - 4
+    # adam最优学习率为3e-4
+    # 另一种建议1e-5
 
     optimizer = optim.SGD(model.parameters(), lr=lr)
 
@@ -307,17 +308,18 @@ def test_dgl(model, X, Y, FT, essay_len, device='cpu', batch_n=1, title=False, i
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Chinese Discourse', usage='newtrain.py [<args>] [-h | --help]')
-    parser.add_argument('--model_name', default='wsj', type=str, help='set model_name')
-    parser.add_argument('--seed_num', default=1, type=int, help='set seed_num')
-    parser.add_argument('--epoch', default=700, type=int, help='set epoch_num')
-    parser.add_argument('--learning_rate', default=0.2, type=float, help='set learning_rate')
-    parser.add_argument('--gcn_aggregator_type', default='gcn', type=str, help='set aggregator_type')
+    parser.add_argument('--model_type', default=1, type=int, help='set model type')
+    # 1:POS1, 2:Bottom
+    parser.add_argument('--model_name', default='wsj', type=str, help='set model name')
+    parser.add_argument('--seed_num', default=1, type=int, help='set seed num')
+    parser.add_argument('--epoch', default=700, type=int, help='set epoch num')
+    parser.add_argument('--learning_rate', default=0.2, type=float, help='set learning rate')
+    parser.add_argument('--gcn_aggregator_type', default='gcn', type=str, help='set aggregator type of gcn')
     # 'gcn','lstm','pool','mean'
-    parser.add_argument('--weight_define', default=3, type=int, help='set how to sefine weight between nodes')
+    parser.add_argument('--weight_define', default=1, type=int, help='set how to define weight between nodes')
     # 1:余弦相似度，2:Pearson相似度，3:欧氏距离，4:kendall系数，
-
-
-
+    parser.add_argument('--add_self_loop', default=0, type=int, help='whether to add self-loop in dgl')
+    # 默认不添加self-loop
 
     args = parser.parse_args()
 
@@ -367,9 +369,23 @@ if __name__ == "__main__":
         # 返回大于等于该数值的最小整数
         features = utils.discretePos(features)
 
-    tag_model = STWithRSbySPP_DGL_POS1(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
-                                       pool_type='max_pool', dgl_layer=dgl_layers, gcn_aggr=gcn_aggregator,
-                                       weight_id=gcn_weight_id)
+    tag_model = None
+
+    if args.model_type == 1:
+        # 右边的content self attention仍采用原始的sentence_embeeding
+        # 左边和右边的采用过了DGL之后的sentence_embeeding
+        tag_model = STWithRSbySPP_DGL_POS1(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd,
+                                           p_embd_dim=p_embd_dim,
+                                           pool_type='max_pool', dgl_layer=dgl_layers, gcn_aggr=gcn_aggregator,
+                                           weight_id=gcn_weight_id,
+                                           loop=args.add_self_loop)
+    elif args.model_type == 2:
+        # 对原始的sentence_embeeding先进行DGL，剩下的三部分均在此基础上进行
+        tag_model = STWithRSbySPP_DGL_POS_Bottom(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd,
+                                                 p_embd_dim=p_embd_dim,
+                                                 pool_type='max_pool', dgl_layer=dgl_layers, gcn_aggr=gcn_aggregator,
+                                                 weight_id=gcn_weight_id,
+                                                 loop=args.add_self_loop)
 
     if p_embd == 'embd_b':
         tag_model.posLayer.init_embedding()
