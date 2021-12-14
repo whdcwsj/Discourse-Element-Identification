@@ -123,7 +123,7 @@ def test_all(test, newdir, w_file, data, title=False, is_mask=False):
             #         tag_model.pWeight = torch.nn.Parameter(torch.ones(3))
 
             if len(data) == 3:
-                accuracy, a = test(tag_model, pad_documents, pad_labels, features, 'cpu', batch_n=1, title=title,
+                accuracy, _, a = test(tag_model, pad_documents, pad_labels, features, 'cpu', batch_n=1, title=title,
                                    is_mask=is_mask)
             else:
                 accuracy, loss, a = test(tag_model, pad_documents, pad_labels, features, essay_length, 'cpu', batch_n=1,
@@ -436,8 +436,8 @@ if __name__ == "__main__":
     if test_type_id == 0:
         # model_package = newtrain.model_package_name
         model_base_dir = './newmodel/cn/' + model_package + '/'
-        # list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
-        list_seed = [1, 100]
+        list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+        # list_seed = [1, 100]
         new_Chinese_test(model_base_dir, list_seed, test_type_id)
 
     elif test_type_id == 1:
@@ -455,8 +455,8 @@ if __name__ == "__main__":
     elif test_type_id == 3:
         # model_package = chinese_train.model_package_name
         model_base_dir = './newmodel/cn/dgl/' + model_package + '/'
-        # list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
-        list_seed = [1, 100]
+        list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+        # list_seed = [1, 100]
         new_Chinese_test(model_base_dir, list_seed, test_type_id)
 
 

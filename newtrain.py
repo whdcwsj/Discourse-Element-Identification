@@ -27,7 +27,7 @@ plt.switch_backend('Agg')
 
 currenttime = time.localtime()
 
-model_package_name = 'baseline_0.6_adam_all'
+model_package_name = 'wsj'
 
 
 # 固定随机数种子
@@ -79,6 +79,8 @@ def train(model, X, Y, FT, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=
         modelName += '_t'
 
     writer = SummaryWriter('./newlog/cn/' +  model_package_name + '/cn_' + modelName + '_' + time.strftime('%m-%d_%H.%M', currenttime))
+
+    print(len(X))
 
     # 10%的数据作为验证集
     X_train, Y_train, ft_train, X_test, Y_test, ft_test = utils.dataSplit(X, Y, FT, 0.1)
