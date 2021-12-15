@@ -1,4 +1,5 @@
 import json
+import random
 
 # jsonData = '{"a":1,"b":2,"c":3,"d":4,"e":"wsj"}'
 # text = json.loads(jsonData)
@@ -177,13 +178,16 @@ import torch
 # print(x.shape)
 
 
-b = 1
-a = [1,2,3,4,5,6]
-if b in a:
-    print("www")
-else:
-    print("nnn")
+# b = 1
+# a = [1,2,3,4,5,6]
+# if b in a:
+#     print("www")
+# else:
+#     print("nnn")
 
+
+append_idx = random.sample(range(0, 3), int(2))
+print(append_idx)
 
 
 

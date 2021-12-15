@@ -5,7 +5,6 @@ import math
 
 import random
 
-
 # random.seed(312)
 
 # 总训练集长度
@@ -17,9 +16,9 @@ def splitDataIntoTwoPart(in_file, out_file1, out_file2, data_length=1112, p=0.1)
     random.seed(312)
     # 返回范围[a,b]内的随机整数
     # 取原训练集10%的数字作为验证集
-    # random.randint()会存在重复
+    # random.randint()会存在重复(取值范围[a,b])
     # dev_idx = [random.randint(0, data_length - 1) for _ in range(int(data_length * p))]
-    dev_idx = random.sample(range(0, data_length - 1), int(data_length * p))
+    dev_idx = random.sample(range(0, data_length), int(data_length * p))
     # print(len(dev_idx))
     # print(dev_idx)
 

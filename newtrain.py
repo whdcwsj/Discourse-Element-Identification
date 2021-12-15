@@ -306,7 +306,7 @@ if __name__ == "__main__":
 
     seed_torch(args.seed_num)
 
-    in_file = './data/Ch_train.json'
+    in_file = './data/new_Ch_train.json'
 
     embed_filename = './embd/new_embeddings2.txt'
     title = True
