@@ -285,14 +285,14 @@ if __name__ == "__main__":
     # Main Claim(主要声明)，Claim(声明)，Premise(前提)，Other，Padding
     # 声明模型的MLP的class_n=5
 
-    # tag_model = STWithRSbySPP(embeddings.embedding_dim, hidden_dim, sent_dim, class_n=5, p_embd=p_embd,
-    #                           p_embd_dim=p_embd_dim, pool_type='max_pool')
+    tag_model = STWithRSbySPP(embeddings.embedding_dim, hidden_dim, sent_dim, class_n=5, p_embd=p_embd,
+                              p_embd_dim=p_embd_dim, pool_type='max_pool')
 
     # tag_model = EnSTWithRSbySPP_GRU(embeddings.embedding_dim, hidden_dim, sent_dim, class_n=5, p_embd=p_embd,
     #                           p_embd_dim=p_embd_dim, pool_type='max_pool')
 
-    tag_model = EnSTWithRSbySPP_GATE(embeddings.embedding_dim, hidden_dim, sent_dim, class_n=5, p_embd=p_embd,
-                              p_embd_dim=p_embd_dim, pool_type='max_pool')
+    # tag_model = EnSTWithRSbySPP_GATE(embeddings.embedding_dim, hidden_dim, sent_dim, class_n=5, p_embd=p_embd,
+    #                           p_embd_dim=p_embd_dim, pool_type='max_pool')
 
     # 创建三个文件名
     if not os.path.exists('./newlog/en/' + model_package_name):

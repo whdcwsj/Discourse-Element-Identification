@@ -11,7 +11,6 @@ import random
 # 1112
 
 def splitDataIntoTwoPart(in_file, out_file1, out_file2, data_length=1112, p=0.1):
-
     # 使用random.seed()，而不是np.numpy.seed()，抱着测试集的不变性，避免主项目中的随机数变化干扰数据划分
     random.seed(312)
     # 返回范围[a,b]内的随机整数
@@ -39,6 +38,19 @@ def splitDataIntoTwoPart(in_file, out_file1, out_file2, data_length=1112, p=0.1)
     dev_file.close()
 
 
+def modifyCombinedSentence(in_file, out_file, length=):
+
+
+    combine_file = open(out_file, 'w', encoding='utf-8')
+
+    count = 0
+    with open(in_file, 'r', encoding='utf-8') as f:
+
+
+
+    combine_file.close()
+
+
 if __name__ == "__main__":
     # dev_id_show = [297, 782, 66, 303, 669, 474, 394, 934, 903, 247, 609, 681, 314, 11, 653, 554, 334, 309, 517, 97, 660,
     #                563, 651, 417, 223, 370, 794, 441, 487, 62, 252, 943, 282, 632, 382, 910, 665, 388, 395, 48, 341,
@@ -50,7 +62,11 @@ if __name__ == "__main__":
     # print(len(dev_id_show))
     # 111
 
-    file_in = './Ch_train.json'
-    file_out1 = './new_Ch_train.json'
-    file_out2 = './new_Ch_dev.json'
-    splitDataIntoTwoPart(in_file=file_in, out_file1=file_out1, out_file2=file_out2)
+    # file_in = './Ch_train.json'
+    # file_out1 = './new_Ch_train.json'
+    # file_out2 = './new_Ch_dev.json'
+    # splitDataIntoTwoPart(in_file=file_in, out_file1=file_out1, out_file2=file_out2)
+
+    file_in = './new_Ch_dev.json'
+    file_out = './new_Combine_Ch_dev.json'
+    modifyCombinedSentence(in_file=file_in, out_file=file_out)
