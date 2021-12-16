@@ -192,7 +192,8 @@ if __name__ == '__main__':
     # print(len(pos_features[-1]))
     # print(len(documents[-1]))
     # kkk = pos_features[-1]
-    # print(kkk[:, :6])
+    # kk = np.array(kkk)
+    # print(kk[:, :6])
 
     # id_labels = labelEncode(labels)
     # print(len((features)))
@@ -275,7 +276,10 @@ if __name__ == '__main__':
     for data in dataloader:
         token_ids, pos, label = data
         if i == 0:
+            print(token_ids.shape)  # torch.Size([1, 30, 40])
             print(token_ids)
+            print(pos.shape)   # torch.Size([1, 30, 6])
             print(pos)
+            print(label.shape)
             print(label)
         i += 1
