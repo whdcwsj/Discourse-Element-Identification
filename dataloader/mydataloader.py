@@ -52,6 +52,7 @@ def getRelativePos(load_dict):
 
 # 返回每篇文章：句子列表(带titile)，每句话的标签列表，每个句子的按顺序对应的六个特征
 # 输入：数据集，title=True
+# 每篇文章最多不超过99句话
 def loadDataAndFeature(in_file, title=False, max_len=99):
     labels = []
     documents = []
@@ -106,33 +107,29 @@ def labelEncode(labels):
     return en_labels
 
 
-# 每个句子的最大长度
-def sentencePaddingId(documents, labels, n_l=40, is_cutoff=True):
+# 每个句子的最大长度(最多四十个词)
+def sentencePaddingId(documents, n_l=40, is_cutoff=True):
     pad_documents = []
-    # 每行
-    for sentences in documents:
-        length = len(sentences)
-        out_sentences = []
-        # 每个句子
-        for sentence in sentences:
-            if len(sentence) % n_l:
-                sentence = sentence + PADDING * (n_l - len(sentence) % n_l)
-            if is_cutoff:
-                out_sentences.append(sentence[0: n_l])
-        pad_documents.append(out_sentences)
-    pad_labels = labels
-    return pad_documents, pad_labels
+    # 每个句子
+    for sentence in documents:
+        if len(sentence) % n_l:
+            sentence = sentence + PADDING * (n_l - len(sentence) % n_l)
+        if is_cutoff:
+            pad_documents.append(sentence[0: n_l])
+
+    return pad_documents
 
 
 class BertDataset(Dataset):
-    def __init__(self, config, data_path):
+    def __init__(self, config, data_path, add_title=True):
         super(BertDataset, self).__init__()
         self.config = config
         self.data_list = []
         self.tokenizer = BertTokenizer.from_pretrained(config.bert_path)
+        self.add_title = add_title
 
         # 返回每篇文章：句子列表(带titile)，每句话的标签列表，每个句子的按顺序对应的六个特征
-        self.documents, labels, self.pos_features = loadDataAndFeature(data_path, title=True)
+        self.documents, labels, self.pos_features = loadDataAndFeature(data_path, title=self.add_title)
 
         # 所有文章，每片文章中所有句子的label，从文字转换为id
         self.id_labels = labelEncode(labels)
@@ -140,81 +137,43 @@ class BertDataset(Dataset):
 
     def __getitem__(self, item):
         essay = self.documents[item]
-        pos = self.pos_features[item]
-        label = self.id_labels[item]
+        pos_item = self.pos_features[item]
+        label_item = self.id_labels[item]
 
-        # 保留了开头的[CLS]和结尾的[SEP]
-        essay_id = self.tokenizer(essay)
+        # 将分散的中文单词，每句话合并到一起
+        cn_essay = []
+        # 每句话
+        for i in range(len(essay)):
+            # 每句话都放在一个列表中
+            out_sentence = []
+            temp_string = ''
+            # 每句话中的单词
+            for j in range(len(essay[i])):
+                temp_string = temp_string + essay[i][j]
+            out_sentence.append(temp_string)
+            cn_essay.append(out_sentence)
 
+        # 将子词列表转化为id的列表，无[CLS]和[SEP]
+        token_id = []
+        for i in range(len(cn_essay)):
+            seq = self.tokenizer.tokenize(''.join(cn_essay[i]))
+            sentence_id = self.tokenizer.convert_tokens_to_ids(seq)
+            token_id.append(sentence_id)
 
-
-
-        # tokenize
-        # for sentence in sent:
-        tokenized = self.tokenizer(sent, padding=True)
-        token_ids = tokenized['input_ids']
-        masks = tokenized['attention_mask']
+        # token_id: [[7231, 6428], [100, 4761, 7231, 2218, 3121, 8024, 1587, 5811, 1920, 4183, 100, 1372,
+        # pad_token_id: [[7231, 6428, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        pad_token_id = sentencePaddingId(token_id)
 
         # 格式转换
-        # pos_features = torch.tensor(pos_features, dtype=torch.float, device=config.device)[:, :, :6]
-        # id_labels = torch.tensor(id_labels, dtype=torch.long, device=config.device)
+        pad_token_id = torch.tensor(pad_token_id, dtype=torch.float, device=self.config.device)
+        pos_item = torch.tensor(pos_item, dtype=torch.float, device=self.config.device)[:, :6]
+        label_item = torch.tensor(label_item, dtype=torch.long, device=self.config.device)
 
 
-        return essay, label, pos
+        return pad_token_id, pos_item, label_item
 
     def __len__(self):
-        return len(self)
-
-
-# class MyDataset(Dataset):
-#     def __init__(self, config, dataset, device, test=False):
-#         super(MyDataset, self).__init__()
-#         self.config = config
-#         self.dataset = dataset
-#         self.id_arr = np.asarray(self.dataset.iloc[:, 0])
-#         self.text_arr = np.asarray(self.dataset.iloc[:, 1])
-#         self.test = test
-#         if self.test is False:
-#             self.first_label_arr = np.asarray(self.dataset.iloc[:, 3])
-#             self.second_label_arr = np.asarray(self.dataset.iloc[:, 4])
-#         self.device = device
-#         if config.embedding_pretrained_model is not None:
-#             self.vob = config.embedding_pretrained_model.wv.key_to_index.keys()
-#             # # 加入PAD 字符
-#             # self.vob.append(0)
-#
-#     def __getitem__(self, item):
-#         id_ = self.id_arr[item]
-#         id_ = torch.tensor(id_).to(self.device)
-#         token_ids = self.text_arr[item]
-#         # 处理word embedding预训练的
-#         if self.config.embedding_pretrained_model is not None:
-#             token_ids_temp = []
-#             # 如果不在word embedding中的token 则去掉
-#             for index, token_id in enumerate(token_ids):
-#                 if token_id in self.vob:
-#                     # 用0号作为padding embedding多加入了一行， 所以index需要+1
-#                     token_ids_temp.append(self.config.embedding_pretrained_model.wv.key_to_index[token_id] + 1)
-#             token_ids = token_ids_temp
-#         # padding and truncated
-#         padding_len = self.config.pad_size - len(token_ids)
-#         if padding_len >= 0:
-#             token_ids = token_ids + [0] * padding_len
-#         else:
-#             token_ids = token_ids[:self.config.pad_size]
-#         token_ids = torch.tensor(token_ids).to(self.device)
-#         if self.test is False:
-#             first_label = self.first_label_arr[item]
-#             second_label = self.second_label_arr[item]
-#             first_label = torch.tensor(first_label - 1).to(self.device)
-#             second_label = torch.tensor(second_label - 1).to(self.device)
-#             return token_ids, first_label, second_label
-#         else:
-#             return id_, token_ids
-#
-#     def __len__(self):
-#         return len(self.id_arr)
-
+        return len(self.documents)
 
 
 
@@ -229,26 +188,94 @@ if __name__ == '__main__':
     #     _output, _, _, _ = model(token_ids, masks)
     #     print()
 
-    # documents, labels, features = loadDataAndFeature('../data/new_Ch_train.json', title=True)
-    # print(len(documents))
-    # print(len(labels))
-    # print(len(features))
+    # documents, labels, pos_features = loadDataAndFeature('../data/new_Ch_dev.json', title=True)
+    # print(len(pos_features[-1]))
+    # print(len(documents[-1]))
+    # kkk = pos_features[-1]
+    # print(kkk[:, :6])
+
+    # id_labels = labelEncode(labels)
+    # print(len((features)))
+    # print(documents[-3])
+
+    # pad_documents, pad_labels = sentencePaddingId(documents, labels)
+    # print(pad_documents[-3])
+    # print(pad_labels[-3])
+
+    # print(len(documents[-3]))
+    # print(documents[-3])
+    # print(labels[-3])
+    # print(features[-3])
 
 
-    tokenizer = BertTokenizer.from_pretrained(r'/home/wsj/bert_model/chinese/bert_chinese_L-12_H-768_A-12')
-    text = '今天天气真不错'
-    true_text = ["平凡", "的", "沙子", "中", "蕴含", "着", "宝贵", "的", "黄金", "，", "平凡", "的", "泥土", "里", "培养", "出", "鲜活", "的", "生命", "。"]
-    new_text = ["平凡的沙子中蕴含着宝贵的黄金，平凡的泥土里培养出鲜活的生命。"]
+    # wang = documents[-1]
+    # print(len(wang))
+    # cn_essay = []
+    #
+    # # 每句话
+    # for i in range(len(wang)):
+    #     out_sentence = []
+    #     temp_string = ''
+    #     for j in range(len(wang[i])):
+    #         temp_string = temp_string + wang[i][j]
+    #     out_sentence.append(temp_string)
+    #     cn_essay.append(out_sentence)
+    #
+    # print(cn_essay)
+
+    # 英文的编码之后的样子，每个句子单独编码一次，包括title
+    # [[2336, 2323, 5702, 2524, 2030, 2652, 4368, 1029, 2119, 2064, 5335, 2037, 2925],
+
+    # tokenizer = BertTokenizer.from_pretrained(r'/home/wsj/bert_model/chinese/bert_chinese_L-12_H-768_A-12')
+    # text = '今天天气真不错'
+    # true_text = ["平凡", "的", "沙子", "中", "蕴含", "着", "宝贵", "的", "黄金", "，", "平凡", "的", "泥土", "里", "培养", "出", "鲜活", "的", "生命", "。"]
+    # new_text = "平凡的沙子中蕴含着宝贵的黄金，平凡的泥土里培养出鲜活的生命。"
+    # true_text1 = ["“", "知错", "就", "改", "，", "善莫大焉", "”", "只要", "我们", "能够", "重新", "改过", "，", "人格", "便", "会", "得到", "升华", "。"]
     # wang = tokenizer(text)['input_ids'][1:-1]
-    si = tokenizer.convert_tokens_to_ids(true_text)
-    # [100, 4638, 100, 704, 100, 4708, 100, 4638, 100, 8024, 100, 4638, 100, 7027, 100, 1139, 100, 4638, 100, 511]
-    # 这样UnKnown的词汇太多
-    jie = tokenizer(new_text)['input_ids']
-    # [[101, 2398, 1127, 4638, 3763, 2094, 704, 5943, 1419, 4708, 2140, 6586, 4638, 7942, 7032, 8024, 2398, 1127, 4638, 3799, 1759, 7027, 1824, 1075, 1139, 7831, 3833, 4638, 4495, 1462, 511, 102]]
-    # 平，凡，的，沙，子
-    # 我需要处理一下原数据集
+    # si = tokenizer.convert_tokens_to_ids(new_text)
+    # si = tokenizer(new_text)
+    # 该方法，中间会有空格
+    # hhh = tokenizer.convert_tokens_to_string(true_text1)
+    #
+    #
+    # # [100, 4638, 100, 704, 100, 4708, 100, 4638, 100, 8024, 100, 4638, 100, 7027, 100, 1139, 100, 4638, 100, 511]
+    # # 这样UnKnown的词汇太多
+    # # jie = tokenizer(new_text)['input_ids']
+    # # [[101, 2398, 1127, 4638, 3763, 2094, 704, 5943, 1419, 4708, 2140, 6586, 4638, 7942, 7032, 8024, 2398, 1127, 4638, 3799, 1759, 7027, 1824, 1075, 1139, 7831, 3833, 4638, 4495, 1462, 511, 102]]
+    # # 平，凡，的，沙，子
 
+    # now = tokenizer(temp_string)['input_ids'][1:-1]
+    # print(now)
 
     # print(wang)
-    print(si)
-    print(jie)
+    # print(si)
+    # print(hhh)
+    # print(jie)
+
+    # {'input_ids': [[101, 7231, 6428, 102],
+    #                [101, 100, 4761, 7231, 2218, 3121, 8024, 1587, 5811, 1920, 4183, 100, 1372, 6206, 2769, 812, 5543,
+    #                 1916, 7028, 3173, 3121
+    # qqq = tokenizer(cn_essay)
+    # print(qqq)
+
+    # eee = []
+    # for i in range(len(cn_essay)):
+    #     seq = tokenizer.tokenize(''.join(cn_essay[i]))
+    #     ppp = tokenizer.convert_tokens_to_ids(seq)
+    #     eee.append(ppp)
+    # print(eee)
+    # # print(len(eee))
+    # nnn = sentencePaddingId(eee)
+    # print(nnn)
+
+    config = Config()
+    dev_dataset = BertDataset(config=config, data_path=config.dev_data_path)
+    dataloader = DataLoader(dev_dataset)
+    i = 0
+    for data in dataloader:
+        token_ids, pos, label = data
+        if i == 0:
+            print(token_ids)
+            print(pos)
+            print(label)
+        i += 1

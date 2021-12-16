@@ -38,17 +38,34 @@ def splitDataIntoTwoPart(in_file, out_file1, out_file2, data_length=1112, p=0.1)
     dev_file.close()
 
 
-def modifyCombinedSentence(in_file, out_file, length=):
-
-
-    combine_file = open(out_file, 'w', encoding='utf-8')
-
-    count = 0
-    with open(in_file, 'r', encoding='utf-8') as f:
-
-
-
-    combine_file.close()
+# 用不上了
+# def modifyCombinedSentence(in_file, out_file, data_length=111):
+#
+#
+#     combine_file = open(out_file, 'w', encoding='utf-8')
+#
+#     count = 0
+#     with open(in_file, 'r', encoding='utf-8') as f:
+#         for line in f:
+#             if count == 0:
+#
+#                 # 这样读的数据都是str格式的，不太好处理
+#                 # temp_data = f.readline()
+#                 # print(temp_data)
+#                 # print(type(temp_data))
+#
+#                 temp_data = json.loads(line)
+#                 word_sentence = temp_data['sents']
+#
+#                 print(word_sentence)
+#                 print(len(word_sentence))
+#
+#                 for j in range(len(word_sentence)):
+#
+#             count += 1
+#
+#
+#     combine_file.close()
 
 
 if __name__ == "__main__":
@@ -62,11 +79,11 @@ if __name__ == "__main__":
     # print(len(dev_id_show))
     # 111
 
-    # file_in = './Ch_train.json'
-    # file_out1 = './new_Ch_train.json'
-    # file_out2 = './new_Ch_dev.json'
-    # splitDataIntoTwoPart(in_file=file_in, out_file1=file_out1, out_file2=file_out2)
+    file_in = './Ch_train.json'
+    file_out1 = './new_Ch_train.json'
+    file_out2 = './new_Ch_dev.json'
+    splitDataIntoTwoPart(in_file=file_in, out_file1=file_out1, out_file2=file_out2)
 
-    file_in = './new_Ch_dev.json'
-    file_out = './new_Combine_Ch_dev.json'
-    modifyCombinedSentence(in_file=file_in, out_file=file_out)
+    # file_in = './new_Ch_dev.json'
+    # file_out = './new_Combine_Ch_dev.json'
+    # modifyCombinedSentence(in_file=file_in, out_file=file_out)

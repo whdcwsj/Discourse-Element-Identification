@@ -13,10 +13,14 @@ class Config:
         # self.epoch = 700
         # self.gcn_layers = 3
 
+        self.train_data_path = '../data/new_Ch_train.json'
+        self.dev_data_path = '../data/new_Ch_dev.json'
+        self.test_data_path = '../data/Ch_test.json'
+
         self.model_name = 'wsj_bert_test'
         self.model_save_path = '../newmodel/cn/bert/'
         self.log_path = '../newlog/cn/bert/'
-        self.value_path = './newvalue/cn/bert'
+        self.value_path = '../newvalue/cn/bert/'
 
         self.cuda = torch.cuda.is_available()
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

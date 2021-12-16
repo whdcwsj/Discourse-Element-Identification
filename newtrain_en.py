@@ -23,7 +23,8 @@ plt.switch_backend('Agg')
 
 currenttime = time.localtime()
 
-model_package_name = 'new_baseline0.67_gate2'
+# model_package_name = 'new_baseline0.67_gate2'
+model_package_name = 'wsj'
 
 def list2tensor(x, y, ft, p_embd, device='cpu'):
     inputs = torch.tensor(x, dtype=torch.long, device=device)
@@ -257,9 +258,27 @@ if __name__ == "__main__":
 
     # 获取本文中每个句子的embedding的id号；每个句子对应的label列表；每个行数据的每个句子的按顺序对应的六个特征：['gpos', 'lpos', 'ppos', 'gid', 'lid', 'pid']
     en_documents, en_labels, features = utils.getEnglishSamplesBertId(in_file, tokenizer, title=title, is_word=is_word)
+    print(111)
+    print(en_documents[-1])
+    print(en_labels[-1])
 
     # 返回：按照max_len长度进行处理的句子的embedding的id号，每个句子对应的label列表
     pad_documents, pad_labels = utils.sentencePaddingId(en_documents, en_labels, max_len)
+    print(pad_documents[-1])
+    print(pad_labels[-1])
+
+    # [[2336, 2323, 5702, 2524, 2030, 2652, 4368, 1029, 2119, 2064, 5335, 2037, 2925],
+    #  [2070, 2111, 2903, 2008, 5702, 2524, 2003, 6827, 2112, 2005, 2336, 1010, 4728, 2500, 2111, 2228, 2008, 2652, 4368,
+    #   2003, 5949, 1997, 2051, 1012],
+    #
+    # [0, 4, 1, 2, 3, 4, 3, 3, 3, 2, 4, 3, 3, 3, 3, 3, 3, 3, 1]
+    #
+    # [[2336, 2323, 5702, 2524, 2030, 2652, 4368, 1029, 2119, 2064, 5335, 2037, 2925, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    #   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    #  [2070, 2111, 2903, 2008, 5702, 2524, 2003, 6827, 2112, 2005, 2336, 1010, 4728, 2500, 2111, 2228, 2008, 2652, 4368,
+    #   2003, 5949, 1997, 2051, 1012, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    #
+    # [0, 4, 1, 2, 3, 4, 3, 3, 3, 2, 4, 3, 3, 3, 3, 3, 3, 3, 1]
 
     batch_n = 30
 
