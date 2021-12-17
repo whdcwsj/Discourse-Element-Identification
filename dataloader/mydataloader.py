@@ -278,8 +278,8 @@ if __name__ == '__main__':
         if i == 0:
             print(token_ids.shape)  # torch.Size([1, 30, 40])
             print(token_ids)
-            print(pos.shape)   # torch.Size([1, 30, 6])
+            print(pos.shape)  # torch.Size([1, 30, 6])
             print(pos)
-            print(label.shape)
+            print(label.shape)  # torch.Size([1, 30])
             print(label)
         i += 1

@@ -3,21 +3,29 @@ import time
 import torch
 
 class Config:
-    def __init__(self):
+    def __init__(self, name):
         # self.train_time = time.strftime('%m-%d_%H.%M', time.localtime())
         # self.num_layers = 1
-        # self.hidden_dim = 128
-        # self.bidirectional = True
-        # self.embedding_dim = 768
-        # self.dropout = 0.1
-        # self.epoch = 700
         # self.gcn_layers = 3
+        # self.dropout = 0.1
+
+        self.word_dim = 768
+        self.hidden_dim = 128
+        self.sent_dim = 128
+        self.class_n = 8
+        self.p_embd = 'add'
+        self.p_embd_dim = 16
+        self.pool_type = 'max_pool'
+        self.bidirectional = True
+
+        self.epoch = 700
+
 
         self.train_data_path = '../data/new_Ch_train.json'
         self.dev_data_path = '../data/new_Ch_dev.json'
         self.test_data_path = '../data/Ch_test.json'
 
-        self.model_name = 'wsj_bert_test'
+        self.model_name = name
         self.model_save_path = '../newmodel/cn/bert/'
         self.log_path = '../newlog/cn/bert/'
         self.value_path = '../newvalue/cn/bert/'

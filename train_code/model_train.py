@@ -7,20 +7,17 @@ from tensorboardX import SummaryWriter
 from torch import optim, nn
 from tqdm import tqdm
 
-from src.utils.Logger import Logger
-
 
 class BertTrainer:
-    def __init__(self, config, model, train_data, eval_data, test_data, need_summary=False):
+    def __init__(self, config, model, train_data, eval_data, test_data):
         self.config = config
         self.model = model
         self.train_data = train_data
         self.eval_data = eval_data
         self.test_data = test_data
-        if need_summary:
-            self.writer = SummaryWriter(log_dir=config.log_path + '/' + config.train_time)
-        else:
-            self.writer = None
+
+        self.writer = SummaryWriter(log_dir=config.log_path + '/' + config.train_time)
+
         self.loss_function = nn.CrossEntropyLoss()
 
     def train(self):
@@ -101,15 +98,11 @@ class BertTrainer:
 
         macro_scores = precision_recall_fscore_support(y_true, y_pred, average='macro')
         micro_scores = precision_recall_fscore_support(y_true, y_pred, average='micro')
-        if need_log:
-            Logger.init(
-                self.config.log_path + '/' + self.config.train_time + (
-                    '/test_' if is_test else '/evaluate_') + 'model_' + self.config.train_time + '.log')
+
         print("Classification Report \n", classification_report(y_true, y_pred, digits=4))
         if is_test:
             print("MACRO: ", macro_scores)
             print("MICRO: ", micro_scores)
             print("\nConfusion Matrix \n", confusion_matrix(y_true, y_pred))
-        if need_log:
-            Logger.flush()
+
         return macro_scores, micro_scores[2], total_loss
