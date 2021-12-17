@@ -186,8 +186,8 @@ import torch
 #     print("nnn")
 
 
-append_idx = random.sample(range(0, 3), int(2))
-print(append_idx)
+# append_idx = random.sample(range(0, 3), int(2))
+# print(append_idx)
 
-
-
+embeddings = torch.load('./embd/bert-base-uncased-word_embeddings.pkl')
+print(embeddings[0])

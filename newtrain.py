@@ -315,6 +315,10 @@ if __name__ == "__main__":
     # 返回：获取本文中每个句子的embedding(单词组合)，每个句子对应的label列表，每个行数据的每个句子的按顺序对应的六个特征，vec_size
     en_documents, en_labels, features, vec_size = utils.getSamplesAndFeatures(in_file, embed_filename, title=title)
 
+    print(111)
+    print(np.array(en_documents[-1]).shape)
+    print(np.array(en_labels[-1]).shape)
+
     # 返回：按照max_len长度进行处理的句子的embedding，每个句子对应的label列表
     pad_documents, pad_labels = utils.sentence_padding(en_documents, en_labels, max_len, vec_size)
 

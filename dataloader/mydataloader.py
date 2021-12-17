@@ -107,6 +107,34 @@ def labelEncode(labels):
     return en_labels
 
 
+# 将中文的字词拼接起来，并进行编码
+def chEncodeBert(documents, labels, tokenizer, is_word=False):
+    en_documents = []
+    # 每行的（每个句子通过逗号划分开）
+    for sentences in documents:
+        length = len(sentences)
+        out_sentences = []
+        # 每一个句子
+        for sentence in sentences:
+            if is_word:
+                seq = tokenizer.tokenize(''.join(sentence))
+            else:
+                # 先分词
+                seq = tokenizer.tokenize(sentence)
+                # ['hello', ',', 'my', 'son', 'is', 'cut', '##ing', '.']
+            # 再转换为id，此时还没有转化为embedding
+            seq = tokenizer.convert_tokens_to_ids(seq)
+            # tensor([7592, 1010, 2026, 2365, 2003, 3013, 2075, 1012])
+            # 并没有开头和结尾的标记：[cls]、[sep]
+            out_sentences.append(seq)
+        en_documents.append(out_sentences)
+
+    en_labels = labelEncode(labels)
+
+    return en_documents, en_labels
+
+
+
 # 每个句子的最大长度(最多四十个词)
 def sentencePaddingId(documents, n_l=40, is_cutoff=True):
     pad_documents = []
@@ -120,9 +148,28 @@ def sentencePaddingId(documents, n_l=40, is_cutoff=True):
     return pad_documents
 
 
-class BertDataset(Dataset):
+# 对于所有文章的句子进行处理
+def essaySentencePaddingId(documents, n_l=40, is_cutoff=True):
+    pad_documents = []
+    # 每篇文章
+    for sentences in documents:
+        length = len(sentences)
+        out_sentences = []
+        # 每个句子
+        for sentence in sentences:
+            if len(sentence) % n_l:
+                sentence = sentence + PADDING * (n_l - len(sentence) % n_l)
+            if is_cutoff:
+                out_sentences.append(sentence[0: n_l])
+        pad_documents.append(out_sentences)
+
+    return pad_documents
+
+
+
+class BertSingleDataset(Dataset):
     def __init__(self, config, data_path, add_title=True):
-        super(BertDataset, self).__init__()
+        super(BertSingleDataset, self).__init__()
         self.config = config
         self.data_list = []
         self.tokenizer = BertTokenizer.from_pretrained(config.bert_path)
@@ -176,26 +223,76 @@ class BertDataset(Dataset):
         return len(self.documents)
 
 
+class BertBatchDataset(Dataset):
+    def __init__(self, config, data_path, add_title=True, batch_size=50):
+        super(BertBatchDataset, self).__init__()
+        self.config = config
+        self.data_list = []
+        self.tokenizer = BertTokenizer.from_pretrained(config.bert_path)
+        self.add_title = add_title
+        self.batch_size = batch_size
+
+        # 返回每篇文章：句子列表(带titile)，每句话的标签列表，每个句子的按顺序对应的六个特征
+        self.documents, labels, self.pos_features = loadDataAndFeature(data_path, title=self.add_title)
+
+        # 所有文章，每片文章中所有句子的label，从文字转换为id
+        self.id_labels = labelEncode(labels)
+
+
+    def __getitem__(self, item):
+        essay = self.documents[item]
+        pos_item = self.pos_features[item]
+        label_item = self.id_labels[item]
+
+        # 将分散的中文单词，每句话合并到一起
+        cn_essay = []
+        # 每句话
+        for i in range(len(essay)):
+            # 每句话都放在一个列表中
+            out_sentence = []
+            temp_string = ''
+            # 每句话中的单词
+            for j in range(len(essay[i])):
+                temp_string = temp_string + essay[i][j]
+            out_sentence.append(temp_string)
+            cn_essay.append(out_sentence)
+
+        # 将子词列表转化为id的列表，无[CLS]和[SEP]
+        token_id = []
+        for i in range(len(cn_essay)):
+            seq = self.tokenizer.tokenize(''.join(cn_essay[i]))
+            sentence_id = self.tokenizer.convert_tokens_to_ids(seq)
+            token_id.append(sentence_id)
+
+        # token_id: [[7231, 6428], [100, 4761, 7231, 2218, 3121, 8024, 1587, 5811, 1920, 4183, 100, 1372,
+        # pad_token_id: [[7231, 6428, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        pad_token_id = sentencePaddingId(token_id)
+
+        # 格式转换
+        pad_token_id = torch.tensor(pad_token_id, dtype=torch.float, device=self.config.device)
+        pos_item = torch.tensor(pos_item, dtype=torch.float, device=self.config.device)[:, :6]
+        label_item = torch.tensor(label_item, dtype=torch.long, device=self.config.device)
+
+
+        return pad_token_id, pos_item, label_item
+
+    def __len__(self):
+        return len(self.documents)
+
+
 
 if __name__ == '__main__':
 
-    # config = Config(name='bert_classifier')
-    # model = BertClassifier(config).to(config.device)
-    # train_dataset = BertDataset(config, r'../data/train/train')
-    # dataloader = DataLoader(train_dataset)
-    # for data in dataloader:
-    #     token_ids, masks, _, out, _ = data
-    #     _output, _, _, _ = model(token_ids, masks)
-    #     print()
+    tokenizer = BertTokenizer.from_pretrained(r'/home/wsj/bert_model/chinese/bert_chinese_L-12_H-768_A-12')
+    documents, labels, pos_features = loadDataAndFeature('../data/new_Ch_dev.json', title=True)
 
-    # documents, labels, pos_features = loadDataAndFeature('../data/new_Ch_dev.json', title=True)
     # print(len(pos_features[-1]))
     # print(len(documents[-1]))
     # kkk = pos_features[-1]
     # kk = np.array(kkk)
     # print(kk[:, :6])
 
-    # id_labels = labelEncode(labels)
+    id_labels = labelEncode(labels)
     # print(len((features)))
     # print(documents[-3])
 
@@ -208,21 +305,54 @@ if __name__ == '__main__':
     # print(labels[-3])
     # print(features[-3])
 
+    cn_document = []
 
-    # wang = documents[-1]
-    # print(len(wang))
-    # cn_essay = []
-    #
-    # # 每句话
-    # for i in range(len(wang)):
-    #     out_sentence = []
-    #     temp_string = ''
-    #     for j in range(len(wang[i])):
-    #         temp_string = temp_string + wang[i][j]
-    #     out_sentence.append(temp_string)
-    #     cn_essay.append(out_sentence)
-    #
-    # print(cn_essay)
+    # 每篇文章
+    for essay in documents:
+        essay_document = []
+        # 每句话
+        for i in range(len(essay)):
+            # 每句话都放在一个列表中
+            out_sentence = []
+            temp_string = ''
+            # 每句话中的单词
+            for j in range(len(essay[i])):
+                temp_string = temp_string + essay[i][j]
+            out_sentence.append(temp_string)
+            essay_document.append(out_sentence)
+
+        cn_document.append(essay_document)
+
+    print(len(cn_document[-1]))
+    print(cn_document[-1])
+
+    # 将子词列表转化为id的列表，无[CLS]和[SEP]
+    document_token_id = []
+    # 每篇文章
+    for i in range(len(cn_document)):
+        essay_token_id = []
+        # 每个句子
+        for j in range(len(cn_document[i])):
+            seq = tokenizer.tokenize(''.join(cn_document[i][j]))
+            sentence_id = tokenizer.convert_tokens_to_ids(seq)
+            essay_token_id.append(sentence_id)
+        document_token_id.append(essay_token_id)
+
+    print(len(document_token_id[-1]))
+    print(document_token_id[-1])
+
+    cn_labels = labelEncode(labels)
+    print(len(cn_labels[-1]))
+    print(cn_labels[-1])
+
+    pad_token_id = essaySentencePaddingId(document_token_id)
+
+    print(len(pad_token_id[-1]))
+    print(pad_token_id[-1])
+
+
+
+
 
     # 英文的编码之后的样子，每个句子单独编码一次，包括title
     # [[2336, 2323, 5702, 2524, 2030, 2652, 4368, 1029, 2119, 2064, 5335, 2037, 2925],
@@ -237,8 +367,7 @@ if __name__ == '__main__':
     # si = tokenizer(new_text)
     # 该方法，中间会有空格
     # hhh = tokenizer.convert_tokens_to_string(true_text1)
-    #
-    #
+
     # # [100, 4638, 100, 704, 100, 4708, 100, 4638, 100, 8024, 100, 4638, 100, 7027, 100, 1139, 100, 4638, 100, 511]
     # # 这样UnKnown的词汇太多
     # # jie = tokenizer(new_text)['input_ids']
@@ -269,17 +398,19 @@ if __name__ == '__main__':
     # nnn = sentencePaddingId(eee)
     # print(nnn)
 
-    config = Config()
-    dev_dataset = BertDataset(config=config, data_path=config.dev_data_path)
-    dataloader = DataLoader(dev_dataset)
-    i = 0
-    for data in dataloader:
-        token_ids, pos, label = data
-        if i == 0:
-            print(token_ids.shape)  # torch.Size([1, 30, 40])
-            print(token_ids)
-            print(pos.shape)  # torch.Size([1, 30, 6])
-            print(pos)
-            print(label.shape)  # torch.Size([1, 30])
-            print(label)
-        i += 1
+
+    # config = Config(name='wsj_bert_test')
+    # dev_dataset = BertSingleDataset(config=config, data_path=config.dev_data_path)
+    # dataloader = DataLoader(dev_dataset, batch_size=1)
+    # i = 0
+    # for data in dataloader:
+    #     if i == 0:
+    #         token_ids, pos, label = data
+    #
+    #         print(token_ids.shape)  # torch.Size([1, 30, 40])
+    #         print(token_ids)
+    #         print(pos.shape)  # torch.Size([1, 30, 6])
+    #         print(pos)
+    #         print(label.shape)  # torch.Size([1, 30])
+    #         print(label)
+    #     i += 1

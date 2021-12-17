@@ -9,6 +9,9 @@ class Config:
         # self.gcn_layers = 3
         # self.dropout = 0.1
 
+        self.model_name = name
+        self.batch_size = 50
+
         self.word_dim = 768
         self.hidden_dim = 128
         self.sent_dim = 128
@@ -21,11 +24,11 @@ class Config:
         self.epoch = 700
 
 
+
         self.train_data_path = '../data/new_Ch_train.json'
         self.dev_data_path = '../data/new_Ch_dev.json'
         self.test_data_path = '../data/Ch_test.json'
 
-        self.model_name = name
         self.model_save_path = '../newmodel/cn/bert/'
         self.log_path = '../newlog/cn/bert/'
         self.value_path = '../newvalue/cn/bert/'

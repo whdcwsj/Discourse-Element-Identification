@@ -17,9 +17,25 @@ def train_bert(model, config):
     eval_dataset = BertDataset(config, config.dev_data_path)
     test_dataset = BertDataset(config, config.test_data_path)
 
-    train_dataloader = DataLoader(train_dataset, shuffle=False)
-    eval_dataloader = DataLoader(eval_dataset, shuffle=False)
-    test_dataloader = DataLoader(test_dataset, shuffle=False)
+    train_dataloader = DataLoader(train_dataset, batch_size=2, shuffle=True)
+
+    i = 0
+    for data in train_dataloader:
+        token_ids, pos, label = data
+        if i == 0:
+            print(token_ids.shape)  # torch.Size([1, 30, 40])
+            print(token_ids)
+            print(pos.shape)  # torch.Size([1, 30, 6])
+            print(pos)
+            print(label.shape)  # torch.Size([1, 30])
+            print(label)
+        i += 1
+
+
+
+
+    # eval_dataloader = DataLoader(eval_dataset, shuffle=False)
+    # test_dataloader = DataLoader(test_dataset, shuffle=False)
 
     # trainer = BertTrainer(config, model, train_dataloader, eval_dataloader, test_dataloader)
     # trainer.train()
