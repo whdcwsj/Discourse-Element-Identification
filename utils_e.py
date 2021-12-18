@@ -221,6 +221,7 @@ def batchGeneratorId(en_documents, labels, features, batch_n, is_random=False):
             mid = random.randint(0, len(en_documents) - 1)
             # print(mid)
             start = max(0, mid - int(batch_n / 2))
+            # math.ceil()向上取整
             end = min(len(en_documents), mid + math.ceil(batch_n / 2))
         else:
             start = i

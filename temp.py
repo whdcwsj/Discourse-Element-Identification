@@ -1,5 +1,6 @@
 import json
 import random
+import math
 
 # jsonData = '{"a":1,"b":2,"c":3,"d":4,"e":"wsj"}'
 # text = json.loads(jsonData)
@@ -189,5 +190,26 @@ import torch
 # append_idx = random.sample(range(0, 3), int(2))
 # print(append_idx)
 
-embeddings = torch.load('./embd/bert-base-uncased-word_embeddings.pkl')
-print(embeddings[0])
+# num = 0
+# for i in range(0, 1001, 100):
+#     print(111)
+#     num += 1
+# print(num)
+
+
+# num = random.randint(0,1)
+# print(num)
+
+# wang = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+# length = len(wang)
+# print(type(length))
+#
+# num = int(math.ceil(length/3))
+# print(num)
+# print(type(num))
+
+# for i in range(10):
+#     if i<5:
+#         print(111)
+#     else:
+#         break

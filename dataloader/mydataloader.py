@@ -5,8 +5,14 @@ import torch
 from transformers import BertTokenizer
 import json
 from src.config import Config
+import random
+import math
 
-# 句子长度不够时进行填充
+
+# 标签补足时，进行填充
+LABELPAD = 0
+
+# 句子长度不够时，进行填充
 PADDING = [0]
 
 # 标签名称对应的ID号
@@ -108,31 +114,40 @@ def labelEncode(labels):
 
 
 # 将中文的字词拼接起来，并进行编码
-def chEncodeBert(documents, labels, tokenizer, is_word=False):
-    en_documents = []
-    # 每行的（每个句子通过逗号划分开）
-    for sentences in documents:
-        length = len(sentences)
-        out_sentences = []
-        # 每一个句子
-        for sentence in sentences:
-            if is_word:
-                seq = tokenizer.tokenize(''.join(sentence))
-            else:
-                # 先分词
-                seq = tokenizer.tokenize(sentence)
-                # ['hello', ',', 'my', 'son', 'is', 'cut', '##ing', '.']
-            # 再转换为id，此时还没有转化为embedding
-            seq = tokenizer.convert_tokens_to_ids(seq)
-            # tensor([7592, 1010, 2026, 2365, 2003, 3013, 2075, 1012])
-            # 并没有开头和结尾的标记：[cls]、[sep]
-            out_sentences.append(seq)
-        en_documents.append(out_sentences)
+def chEncodeBert(documents, tokenizer):
 
-    en_labels = labelEncode(labels)
+    # 1、字词拼接
+    cn_document = []
 
-    return en_documents, en_labels
+    # 每篇文章
+    for essay in documents:
+        essay_document = []
+        # 每句话
+        for i in range(len(essay)):
+            # 每句话都放在一个列表中
+            out_sentence = []
+            temp_string = ''
+            # 每句话中的单词
+            for j in range(len(essay[i])):
+                temp_string = temp_string + essay[i][j]
+            out_sentence.append(temp_string)
+            essay_document.append(out_sentence)
 
+        cn_document.append(essay_document)
+
+    # 2、将子词列表转化为id的列表，无[CLS]和[SEP]
+    document_token_id = []
+    # 每篇文章
+    for i in range(len(cn_document)):
+        essay_token_id = []
+        # 每个句子
+        for j in range(len(cn_document[i])):
+            seq = tokenizer.tokenize(''.join(cn_document[i][j]))
+            sentence_id = tokenizer.convert_tokens_to_ids(seq)
+            essay_token_id.append(sentence_id)
+        document_token_id.append(essay_token_id)
+
+    return cn_document, document_token_id
 
 
 # 每个句子的最大长度(最多四十个词)
@@ -166,7 +181,7 @@ def essaySentencePaddingId(documents, n_l=40, is_cutoff=True):
     return pad_documents
 
 
-
+# 一次输出一篇文章的Dataset
 class BertSingleDataset(Dataset):
     def __init__(self, config, data_path, add_title=True):
         super(BertSingleDataset, self).__init__()
@@ -223,76 +238,110 @@ class BertSingleDataset(Dataset):
         return len(self.documents)
 
 
+# 一次输出batch_size个文章的Dataset
 class BertBatchDataset(Dataset):
-    def __init__(self, config, data_path, add_title=True, batch_size=50):
+    def __init__(self, config, data_path, add_title=True, batch_size=50, is_random=False):
         super(BertBatchDataset, self).__init__()
         self.config = config
         self.data_list = []
         self.tokenizer = BertTokenizer.from_pretrained(config.bert_path)
         self.add_title = add_title
         self.batch_size = batch_size
+        self.is_random = is_random
 
         # 返回每篇文章：句子列表(带titile)，每句话的标签列表，每个句子的按顺序对应的六个特征
-        self.documents, labels, self.pos_features = loadDataAndFeature(data_path, title=self.add_title)
+        documents, labels, self.pos_features = loadDataAndFeature(data_path, title=self.add_title)
+        # pos_features: [0.0625, 1.0, 0.2, 1, 1, 1]
+
+        # 拼接中文字词，变成Bert的ID
+        self.cn_document, self.document_token_id = chEncodeBert(documents=documents, tokenizer=self.tokenizer)
+
+        # 填充，每个句子最多四十个词
+        self.pad_document_id = essaySentencePaddingId(self.document_token_id)
 
         # 所有文章，每片文章中所有句子的label，从文字转换为id
-        self.id_labels = labelEncode(labels)
-
+        self.cn_labels = labelEncode(labels)  # [7, 1, 2, 3, 6, 2, 2, 3, 3, 2, 3, 2, 4, 4, 4, 4, 4]
 
     def __getitem__(self, item):
-        essay = self.documents[item]
-        pos_item = self.pos_features[item]
-        label_item = self.id_labels[item]
 
-        # 将分散的中文单词，每句话合并到一起
-        cn_essay = []
-        # 每句话
-        for i in range(len(essay)):
-            # 每句话都放在一个列表中
-            out_sentence = []
-            temp_string = ''
-            # 每句话中的单词
-            for j in range(len(essay[i])):
-                temp_string = temp_string + essay[i][j]
-            out_sentence.append(temp_string)
-            cn_essay.append(out_sentence)
+        # print("item:")
+        # print(item)
+        # print(type(item))
 
-        # 将子词列表转化为id的列表，无[CLS]和[SEP]
-        token_id = []
-        for i in range(len(cn_essay)):
-            seq = self.tokenizer.tokenize(''.join(cn_essay[i]))
-            sentence_id = self.tokenizer.convert_tokens_to_ids(seq)
-            token_id.append(sentence_id)
+        data = list(zip(self.pad_document_id, self.cn_labels, self.pos_features))
+        # 按文章句子个数从短到长排序
+        data.sort(key=lambda x: len(x[0]))
 
-        # token_id: [[7231, 6428], [100, 4761, 7231, 2218, 3121, 8024, 1587, 5811, 1920, 4183, 100, 1372,
-        # pad_token_id: [[7231, 6428, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        pad_token_id = sentencePaddingId(token_id)
+        # 随机获取一个起始的ID
+        start_id = item * self.batch_size
+        if self.is_random:
+            random.seed()
+            # [a,b]
+            mid = random.randint(0, len(self.pad_document_id) - 1)
+            start = max(0, mid - int(self.batch_size / 2))
+            # math.ceil()向上取整
+            end = min(len(self.pad_document_id), mid + math.ceil(self.batch_size / 2))
+        else:
+            start = start_id
+            end = start_id + self.batch_size
+
+        batch_data = data[start: end]
+
+        batch_document, batch_label, batch_feature = zip(*batch_data)
+        # 输出的：<class 'tuple'>,需要列表化
+        batch_feature = list(batch_feature)
+        batch_document = list(batch_document)
+        batch_label = list(batch_label)
+
+        # 记录一个batch中文章包含的最长句子个数
+        max_len_essay = len(batch_document[-1])
+
+        # 如果当前批次句子长度均都一样
+        if len(batch_document[0]) == max_len_essay:
+            pass
+        else:
+            # 每个句子的单词数量
+            sen_len = len(batch_document[0][0])
+            # 特征的数量
+            ft_len = len(batch_feature[0][0])
+            # 遍历batch中的每篇文章
+            for j in range(len(batch_document)):
+                if len(batch_document[j]) < max_len_essay:
+                    # 记录当前文章的句子数量
+                    temp_l = len(batch_document[j])
+                    batch_document[j] = batch_document[j] + [PADDING * sen_len] * (max_len_essay - temp_l)
+                    batch_label[j] = batch_label[j] + [LABELPAD] * (max_len_essay - temp_l)
+                    batch_feature[j] = batch_feature[j] + [PADDING * ft_len] * (max_len_essay - temp_l)
+                else:
+                    # 长度相同，则可以跳出本层for循环
+                    break
 
         # 格式转换
-        pad_token_id = torch.tensor(pad_token_id, dtype=torch.float, device=self.config.device)
-        pos_item = torch.tensor(pos_item, dtype=torch.float, device=self.config.device)[:, :6]
-        label_item = torch.tensor(label_item, dtype=torch.long, device=self.config.device)
-
+        pad_token_id = torch.tensor(batch_document, dtype=torch.float, device=self.config.device)
+        pos_item = torch.tensor(batch_feature, dtype=torch.float, device=self.config.device)[:, :, :6]
+        label_item = torch.tensor(batch_label, dtype=torch.long, device=self.config.device)
 
         return pad_token_id, pos_item, label_item
 
     def __len__(self):
-        return len(self.documents)
+        return int(math.ceil(len(self.pad_document_id)/self.batch_size))
 
 
 
 if __name__ == '__main__':
 
-    tokenizer = BertTokenizer.from_pretrained(r'/home/wsj/bert_model/chinese/bert_chinese_L-12_H-768_A-12')
-    documents, labels, pos_features = loadDataAndFeature('../data/new_Ch_dev.json', title=True)
-
+    # tokenizer = BertTokenizer.from_pretrained(r'/home/wsj/bert_model/chinese/bert_chinese_L-12_H-768_A-12')
+    # documents, labels, pos_features = loadDataAndFeature('../data/new_Ch_train.json', title=True)
+    #
+    # print("pos_feature:")
     # print(len(pos_features[-1]))
+    # print(pos_features[-1])
     # print(len(documents[-1]))
     # kkk = pos_features[-1]
     # kk = np.array(kkk)
     # print(kk[:, :6])
 
-    id_labels = labelEncode(labels)
+    # id_labels = labelEncode(labels)
     # print(len((features)))
     # print(documents[-3])
 
@@ -305,52 +354,101 @@ if __name__ == '__main__':
     # print(labels[-3])
     # print(features[-3])
 
-    cn_document = []
-
-    # 每篇文章
-    for essay in documents:
-        essay_document = []
-        # 每句话
-        for i in range(len(essay)):
-            # 每句话都放在一个列表中
-            out_sentence = []
-            temp_string = ''
-            # 每句话中的单词
-            for j in range(len(essay[i])):
-                temp_string = temp_string + essay[i][j]
-            out_sentence.append(temp_string)
-            essay_document.append(out_sentence)
-
-        cn_document.append(essay_document)
-
-    print(len(cn_document[-1]))
-    print(cn_document[-1])
-
-    # 将子词列表转化为id的列表，无[CLS]和[SEP]
-    document_token_id = []
-    # 每篇文章
-    for i in range(len(cn_document)):
-        essay_token_id = []
-        # 每个句子
-        for j in range(len(cn_document[i])):
-            seq = tokenizer.tokenize(''.join(cn_document[i][j]))
-            sentence_id = tokenizer.convert_tokens_to_ids(seq)
-            essay_token_id.append(sentence_id)
-        document_token_id.append(essay_token_id)
-
-    print(len(document_token_id[-1]))
-    print(document_token_id[-1])
-
-    cn_labels = labelEncode(labels)
-    print(len(cn_labels[-1]))
-    print(cn_labels[-1])
-
-    pad_token_id = essaySentencePaddingId(document_token_id)
-
-    print(len(pad_token_id[-1]))
-    print(pad_token_id[-1])
-
-
+    # cn_document, document_token_id = chEncodeBert(documents, tokenizer)
+    #
+    # print("cn_document:")
+    # print(len(cn_document[-1]))
+    # print(cn_document[-1])
+    #
+    # print("document_token_id:")
+    # print(len(document_token_id[-1]))
+    # print(document_token_id[-1])
+    #
+    # cn_labels = labelEncode(labels)
+    # print("cn_labels:")
+    # print(len(cn_labels[-1]))
+    # print(cn_labels[-1])
+    #
+    # pad_document_id = essaySentencePaddingId(document_token_id)
+    #
+    # print("pad_document_id:")
+    # print(len(pad_document_id[-1]))
+    # print(pad_document_id[-1])
+    #
+    # batch_n = 50
+    # is_random = True
+    #
+    # data = list(zip(pad_document_id, cn_labels, pos_features))
+    # print("data before:")
+    # print(len(data[-1][0]))
+    # print(data[-1][0])
+    #
+    # data.sort(key=lambda x: len(x[0]))
+    # print("data after:")
+    # print(len(data[-1][0]))
+    # print(data[-1][0])
+    # print("*****************************************")
+    #
+    # for i in range(0, len(pad_document_id), batch_n):
+    #     if is_random:
+    #         random.seed()
+    #         # [a,b]
+    #         mid = random.randint(0, len(pad_document_id) - 1)
+    #         # print(mid)
+    #         start = max(0, mid - int(batch_n / 2))
+    #         # math.ceil()向上取整
+    #         end = min(len(pad_document_id), mid + math.ceil(batch_n / 2))
+    #     else:
+    #         start = i
+    #         end = i + batch_n
+    #
+    #     b_data = data[start: end]
+    #
+    #     b_docs, b_labs, b_ft = zip(*b_data)
+    #     b_ft = list(b_ft)
+    #
+    #     b_docs = list(b_docs)
+    #     b_labs = list(b_labs)
+    #     max_len = len(b_docs[-1])
+    #
+    #     if i == 0:
+    #         print("batch中的数据：")
+    #         print("b_docs:")
+    #         print(len(b_docs[0]))
+    #         print(b_docs[0])
+    #         print("b_ft：")
+    #         print(len(b_ft[0]))
+    #         print(b_ft[0])
+    #         print("b_labs:")
+    #         print(len(b_labs[0]))
+    #         print(b_labs[0])
+    #         print("当前批次最大文章长度:")
+    #         print(max_len)
+    #
+    #         # 如果当前批次句子长度均都一样
+    #         if len(b_docs[0]) == max_len:
+    #             print(b_docs)
+    #             print(b_labs)
+    #             print(b_ft)
+    #         else:
+    #             # 每个句子的单词数量
+    #             sen_len = len(b_docs[0][0])
+    #             # 特征的数量
+    #             ft_len = len(b_ft[0][0])
+    #             for j in range(len(b_docs)):
+    #                 if len(b_docs[j]) < max_len:
+    #                     l = len(b_docs[j])
+    #                     b_docs[j] = b_docs[j] + [PADDING * sen_len] * (max_len - l)
+    #                     b_labs[j] = b_labs[j] + [LABELPAD] * (max_len - l)
+    #                     b_ft[j] = b_ft[j] + [PADDING * ft_len] * (max_len - l)
+    #                 else:
+    #                     break
+    #
+    #             print("文章长度不一样之后的修改：")
+    #             print(len(b_docs[0]))
+    #             print(len(b_labs[0]))
+    #             print(len(b_ft[0]))
+    #             print(max_len)
 
 
 
@@ -399,8 +497,10 @@ if __name__ == '__main__':
     # print(nnn)
 
 
+
+    # # 1、测试BertSingleDataset
     # config = Config(name='wsj_bert_test')
-    # dev_dataset = BertSingleDataset(config=config, data_path=config.dev_data_path)
+    # dev_dataset = BertSingleDataset(config=config, data_path=config.dev_data_path, add_title=True)
     # dataloader = DataLoader(dev_dataset, batch_size=1)
     # i = 0
     # for data in dataloader:
@@ -413,4 +513,23 @@ if __name__ == '__main__':
     #         print(pos)
     #         print(label.shape)  # torch.Size([1, 30])
     #         print(label)
+    #
     #     i += 1
+
+
+
+    # 2、测试BertBatchDataset
+    config = Config(name='wsj_bert_test')
+    dev_dataset = BertBatchDataset(config=config, data_path=config.dev_data_path, add_title=True, batch_size=30,
+                                   is_random=True)
+
+    dataloader = DataLoader(dev_dataset, batch_size=1)
+    i = 0
+    for data in dataloader:
+        if i == 0:
+            token_ids, pos, label = data
+
+            print(token_ids.shape)  # torch.Size([1, 30, 25, 40])
+            print(pos.shape)  # torch.Size([1, 30, 25, 6])
+            print(label.shape)  # torch.Size([1, 30, 25])
+        i += 1

@@ -258,12 +258,13 @@ if __name__ == "__main__":
 
     # 获取本文中每个句子的embedding的id号；每个句子对应的label列表；每个行数据的每个句子的按顺序对应的六个特征：['gpos', 'lpos', 'ppos', 'gid', 'lid', 'pid']
     en_documents, en_labels, features = utils.getEnglishSamplesBertId(in_file, tokenizer, title=title, is_word=is_word)
-    print(111)
+    print("原本的：")
     print(en_documents[-1])
     print(en_labels[-1])
 
     # 返回：按照max_len长度进行处理的句子的embedding的id号，每个句子对应的label列表
     pad_documents, pad_labels = utils.sentencePaddingId(en_documents, en_labels, max_len)
+    print("Pad之后的：")
     print(pad_documents[-1])
     print(pad_labels[-1])
 
