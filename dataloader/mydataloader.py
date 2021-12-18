@@ -183,12 +183,11 @@ def essaySentencePaddingId(documents, n_l=40, is_cutoff=True):
 
 # 一次输出一篇文章的Dataset
 class BertSingleDataset(Dataset):
-    def __init__(self, config, data_path, add_title=True):
+    def __init__(self, config, data_path):
         super(BertSingleDataset, self).__init__()
         self.config = config
-        self.data_list = []
         self.tokenizer = BertTokenizer.from_pretrained(config.bert_path)
-        self.add_title = add_title
+        self.add_title = self.config.add_title
 
         # 返回每篇文章：句子列表(带titile)，每句话的标签列表，每个句子的按顺序对应的六个特征
         self.documents, labels, self.pos_features = loadDataAndFeature(data_path, title=self.add_title)
@@ -240,13 +239,12 @@ class BertSingleDataset(Dataset):
 
 # 一次输出batch_size个文章的Dataset
 class BertBatchDataset(Dataset):
-    def __init__(self, config, data_path, add_title=True, batch_size=50, is_random=False):
+    def __init__(self, config, data_path, is_random=False):
         super(BertBatchDataset, self).__init__()
         self.config = config
-        self.data_list = []
-        self.tokenizer = BertTokenizer.from_pretrained(config.bert_path)
-        self.add_title = add_title
-        self.batch_size = batch_size
+        self.tokenizer = BertTokenizer.from_pretrained(self.config.bert_path)
+        self.add_title = self.config.add_title
+        self.batch_size = self.config.batch_size
         self.is_random = is_random
 
         # 返回每篇文章：句子列表(带titile)，每句话的标签列表，每个句子的按顺序对应的六个特征
@@ -498,38 +496,34 @@ if __name__ == '__main__':
 
 
 
-    # # 1、测试BertSingleDataset
-    # config = Config(name='wsj_bert_test')
-    # dev_dataset = BertSingleDataset(config=config, data_path=config.dev_data_path, add_title=True)
-    # dataloader = DataLoader(dev_dataset, batch_size=1)
-    # i = 0
-    # for data in dataloader:
-    #     if i == 0:
-    #         token_ids, pos, label = data
-    #
-    #         print(token_ids.shape)  # torch.Size([1, 30, 40])
-    #         print(token_ids)
-    #         print(pos.shape)  # torch.Size([1, 30, 6])
-    #         print(pos)
-    #         print(label.shape)  # torch.Size([1, 30])
-    #         print(label)
-    #
-    #     i += 1
-
-
-
-    # 2、测试BertBatchDataset
+    # 1、测试BertSingleDataset
     config = Config(name='wsj_bert_test')
-    dev_dataset = BertBatchDataset(config=config, data_path=config.dev_data_path, add_title=True, batch_size=30,
-                                   is_random=True)
-
+    dev_dataset = BertSingleDataset(config=config, data_path=config.dev_data_path)
     dataloader = DataLoader(dev_dataset, batch_size=1)
     i = 0
     for data in dataloader:
         if i == 0:
             token_ids, pos, label = data
 
-            print(token_ids.shape)  # torch.Size([1, 30, 25, 40])
-            print(pos.shape)  # torch.Size([1, 30, 25, 6])
-            print(label.shape)  # torch.Size([1, 30, 25])
+            print(token_ids.shape)  # torch.Size([1, 30, 40])
+            print(pos.shape)  # torch.Size([1, 30, 6])
+            print(label.shape)  # torch.Size([1, 30])
+
         i += 1
+
+
+
+    # 2、测试BertBatchDataset
+    # config = Config(name='wsj_bert_test')
+    # dev_dataset = BertBatchDataset(config=config, data_path=config.dev_data_path, is_random=True)
+    #
+    # dataloader = DataLoader(dev_dataset, batch_size=1)
+    # i = 0
+    # for data in dataloader:
+    #     if i == 0:
+    #         token_ids, pos, label = data
+    #
+    #         print(token_ids.shape)  # torch.Size([1, 30, 25, 40])
+    #         print(pos.shape)  # torch.Size([1, 30, 25, 6])
+    #         print(label.shape)  # torch.Size([1, 30, 25])
+    #     i += 1

@@ -11,6 +11,7 @@ class Config:
 
         self.model_name = name
         self.batch_size = 50
+        self.add_title = True
 
         self.word_dim = 768
         self.hidden_dim = 128
