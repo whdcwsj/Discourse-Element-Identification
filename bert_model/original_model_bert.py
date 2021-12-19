@@ -76,12 +76,24 @@ class BertClassification(nn.Module):
         self.tag_hidden = (torch.rand(2, batch_n, self.sent_dim, device=device).uniform_(-0.01, 0.01),
                            torch.rand(2, batch_n, self.sent_dim, device=device).uniform_(-0.01, 0.01))
 
-    # 测试集情况
-    # document:(batch_n,doc_l,40,200)
-    # pos:(batch_n,doc_l,6)  6个特征：['gpos', 'lpos', 'ppos', 'gid', 'lid', 'pid']
+    # 输入：
+    # document:(1,batch_n,doc_l,sen_l)
+    # pos:(batch_n,doc_l,6)
     # mask:NONE
     def forward(self, documents, pos=None, mask=None):
-        batch_n, doc_l, sen_l, _ = documents.size()  # documents: (batch_n, doc_l, sen_l, word_dim)
+        documents = documents.squeeze(0)
+
+        # documents的类型可能需要更改
+        temp_batch_output = []
+        for i in range(documents.shape[0]):
+            embedding = self.bert(documents[i])
+            last_hidden_state = embedding[0]
+            last_hidden_state = last_hidden_state.to(self.config.device)
+            temp_batch_output.append(last_hidden_state)
+
+        batch_bert_output = torch.stack(temp_batch_output, dim=0)
+
+        batch_n, doc_l, sen_l, _ = batch_bert_output.size()  # documents: (batch_n, doc_l, sen_l, word_dim)
         self.init_hidden(batch_n=batch_n, doc_l=doc_l, device=self.config.device)
         documents = documents.view(batch_n * doc_l, sen_l, -1).transpose(0,1)  # documents: (sen_l, batch_n*doc_l, word_dim)
 

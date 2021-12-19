@@ -10,7 +10,8 @@ class Config:
         # self.dropout = 0.1
 
         self.model_name = name
-        self.batch_size = 50
+        # batch_size = 30,内存有可能会爆
+        self.batch_size = 20
         self.add_title = True
 
         self.word_dim = 768

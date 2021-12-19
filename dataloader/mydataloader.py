@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from torch.utils.data import DataLoader, Dataset
 import torch
-from transformers import BertTokenizer
+from transformers import BertTokenizer, BertModel, BertForSequenceClassification
 import json
 from src.config import Config
 import random
@@ -315,9 +315,13 @@ class BertBatchDataset(Dataset):
                     break
 
         # 格式转换
-        pad_token_id = torch.tensor(batch_document, dtype=torch.float, device=self.config.device)
-        pos_item = torch.tensor(batch_feature, dtype=torch.float, device=self.config.device)[:, :, :6]
-        label_item = torch.tensor(batch_label, dtype=torch.long, device=self.config.device)
+        # pad_token_id = torch.tensor(batch_document, dtype=torch.int, device=self.config.device)
+        # pos_item = torch.tensor(batch_feature, dtype=torch.float, device=self.config.device)[:, :, :6]
+        # label_item = torch.tensor(batch_label, dtype=torch.long, device=self.config.device)
+
+        pad_token_id = torch.tensor(batch_document, dtype=torch.int, device='cpu')
+        pos_item = torch.tensor(batch_feature, dtype=torch.float, device='cpu')[:, :, :6]
+        label_item = torch.tensor(batch_label, dtype=torch.long, device='cpu')
 
         return pad_token_id, pos_item, label_item
 
@@ -497,33 +501,66 @@ if __name__ == '__main__':
 
 
     # 1、测试BertSingleDataset
-    config = Config(name='wsj_bert_test')
-    dev_dataset = BertSingleDataset(config=config, data_path=config.dev_data_path)
-    dataloader = DataLoader(dev_dataset, batch_size=1)
-    i = 0
-    for data in dataloader:
-        if i == 0:
-            token_ids, pos, label = data
-
-            print(token_ids.shape)  # torch.Size([1, 30, 40])
-            print(pos.shape)  # torch.Size([1, 30, 6])
-            print(label.shape)  # torch.Size([1, 30])
-
-        i += 1
-
-
-
-    # 2、测试BertBatchDataset
     # config = Config(name='wsj_bert_test')
-    # dev_dataset = BertBatchDataset(config=config, data_path=config.dev_data_path, is_random=True)
-    #
+    # dev_dataset = BertSingleDataset(config=config, data_path=config.dev_data_path)
     # dataloader = DataLoader(dev_dataset, batch_size=1)
     # i = 0
     # for data in dataloader:
     #     if i == 0:
     #         token_ids, pos, label = data
     #
-    #         print(token_ids.shape)  # torch.Size([1, 30, 25, 40])
-    #         print(pos.shape)  # torch.Size([1, 30, 25, 6])
-    #         print(label.shape)  # torch.Size([1, 30, 25])
+    #         print(token_ids.shape)  # torch.Size([1, 30, 40])
+    #         print(pos.shape)  # torch.Size([1, 30, 6])
+    #         print(label.shape)  # torch.Size([1, 30])
+    #
     #     i += 1
+
+
+
+    # 2、测试BertBatchDataset
+    config = Config(name='wsj_bert_test')
+    dev_dataset = BertBatchDataset(config=config, data_path=config.dev_data_path, is_random=True)
+
+    dataloader = DataLoader(dev_dataset, batch_size=1)
+    i = 0
+    token_ids = None
+    pos = None
+    label = None
+    for data in dataloader:
+        if i == 0:
+            token_ids, pos, label = data
+
+            # print(token_ids.shape)  # torch.Size([1, 30, 25, 40])
+            # print(pos.shape)  # torch.Size([1, 30, 25, 6])
+            # print(label.shape)  # torch.Size([1, 30, 25])
+        i += 1
+
+    print(token_ids.shape)
+    print(pos.shape)
+    print(label.shape)
+
+    new_token_id = token_ids.squeeze(0)
+    print(new_token_id.shape)
+
+    print("------------------")
+    # print(new_token_id[0])
+
+    # bert的输出：last_hidden_state, pooler_output, all_hidden_states, all_attentions
+    # 1、last_hidden_state：shape是(batch_size, sequence_length, hidden_size)，hidden_size=768，它是模型最后一层输出的隐藏状态
+    # 2、pooler_output：shape是(batch_size, hidden_size)，这是序列的第一个token(classification token)的最后一层的隐藏状态；代表该句句子向量【CLS】
+    # 3、hidden_states：输出可选项，如果输出，需要指定config.output_hidden_states=True
+    # 它也是一个元组，它的第一个元素是embedding，其余元素是各层的输出，每个元素的形状是(batch_size, sequence_length, hidden_size)
+    # 4、attentions：输出可选项，如果输出，需要指定config.output_attentions=True
+    # 它也是一个元组，它的元素是每一层的注意力权重，用于计算self-attention heads的加权平均值
+
+    bert_temp = BertModel.from_pretrained(config.bert_path)
+
+    temp_batch_output = []
+    for i in range(new_token_id.shape[0]):
+        embedding = bert_temp(new_token_id[i])
+        last_hidden_state = embedding[0]
+        last_hidden_state = last_hidden_state.to(config.device)
+        temp_batch_output.append(last_hidden_state)
+
+    batch_bert_output = torch.stack(temp_batch_output, dim=0)
+    print(111)
