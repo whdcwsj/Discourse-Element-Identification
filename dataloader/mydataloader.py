@@ -239,12 +239,16 @@ class BertSingleDataset(Dataset):
 
 # 一次输出batch_size个文章的Dataset
 class BertBatchDataset(Dataset):
-    def __init__(self, config, data_path, is_random=False):
+    def __init__(self, config, data_path, batch_size=None, is_random=False, is_valid=False):
         super(BertBatchDataset, self).__init__()
         self.config = config
         self.tokenizer = BertTokenizer.from_pretrained(self.config.bert_path)
         self.add_title = self.config.add_title
-        self.batch_size = self.config.batch_size
+        # 验证集batch_size设置为1，训练集batch_size按照config来指定
+        if is_valid:
+            self.batch_size = batch_size
+        else:
+            self.batch_size = self.config.batch_size
         self.is_random = is_random
 
         # 返回每篇文章：句子列表(带titile)，每句话的标签列表，每个句子的按顺序对应的六个特征
@@ -315,13 +319,9 @@ class BertBatchDataset(Dataset):
                     break
 
         # 格式转换
-        # pad_token_id = torch.tensor(batch_document, dtype=torch.int, device=self.config.device)
-        # pos_item = torch.tensor(batch_feature, dtype=torch.float, device=self.config.device)[:, :, :6]
-        # label_item = torch.tensor(batch_label, dtype=torch.long, device=self.config.device)
-
-        pad_token_id = torch.tensor(batch_document, dtype=torch.int, device='cpu')
-        pos_item = torch.tensor(batch_feature, dtype=torch.float, device='cpu')[:, :, :6]
-        label_item = torch.tensor(batch_label, dtype=torch.long, device='cpu')
+        pad_token_id = torch.tensor(batch_document, dtype=torch.int, device=self.config.device)
+        pos_item = torch.tensor(batch_feature, dtype=torch.float, device=self.config.device)[:, :, :6]
+        label_item = torch.tensor(batch_label, dtype=torch.long, device=self.config.device)
 
         return pad_token_id, pos_item, label_item
 
@@ -520,6 +520,8 @@ if __name__ == '__main__':
     # 2、测试BertBatchDataset
     config = Config(name='wsj_bert_test')
     dev_dataset = BertBatchDataset(config=config, data_path=config.dev_data_path, is_random=True)
+    # dev_dataset = BertBatchDataset(config=config, data_path=config.dev_data_path, batch_size=1, is_random=True,
+    #                                is_valid=True)
 
     dataloader = DataLoader(dev_dataset, batch_size=1)
     i = 0
@@ -535,6 +537,7 @@ if __name__ == '__main__':
             # print(label.shape)  # torch.Size([1, 30, 25])
         i += 1
 
+    print("原始的shape:")
     print(token_ids.shape)
     print(pos.shape)
     print(label.shape)
@@ -553,7 +556,7 @@ if __name__ == '__main__':
     # 4、attentions：输出可选项，如果输出，需要指定config.output_attentions=True
     # 它也是一个元组，它的元素是每一层的注意力权重，用于计算self-attention heads的加权平均值
 
-    bert_temp = BertModel.from_pretrained(config.bert_path)
+    bert_temp = BertModel.from_pretrained(config.bert_path).to(config.device)
 
     temp_batch_output = []
     for i in range(new_token_id.shape[0]):
@@ -563,4 +566,5 @@ if __name__ == '__main__':
         temp_batch_output.append(last_hidden_state)
 
     batch_bert_output = torch.stack(temp_batch_output, dim=0)
+    print(batch_bert_output.shape)
     print(111)

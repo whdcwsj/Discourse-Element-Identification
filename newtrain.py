@@ -358,7 +358,6 @@ if __name__ == "__main__":
     if p_embd == 'embd_b':
         tag_model.posLayer.init_embedding()
 
-
     # 创建三个文件名
     if not os.path.exists('./newlog/cn/' + model_package_name):
         os.mkdir('./newlog/cn/' + model_package_name)

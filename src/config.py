@@ -9,9 +9,9 @@ class Config:
         # self.gcn_layers = 3
         # self.dropout = 0.1
 
-        self.model_name = name
-        # batch_size = 30,内存有可能会爆
-        self.batch_size = 20
+        self.human_model_name = name
+        # batch_size = 20下，显存出现过不够的情况
+        self.batch_size = 16
         self.add_title = True
 
         self.word_dim = 768
@@ -23,7 +23,7 @@ class Config:
         self.pool_type = 'max_pool'
         self.bidirectional = True
 
-        self.epoch = 700
+        self.epoch = 400
 
 
 
@@ -43,9 +43,9 @@ class Config:
         self.vocab_path = r'/home/wsj/bert_model/chinese/bert_chinese_L-12_H-768_A-12/vocab.txt'
 
 
-        if not os.path.exists(self.model_save_path + self.model_name):
-            os.mkdir(self.model_save_path + self.model_name)
-        if not os.path.exists(self.log_path + self.model_name):
-            os.mkdir(self.log_path + self.model_name)
-        if not os.path.exists(self.value_path + self.model_name):
-            os.mkdir(self.value_path + self.model_name)
+        if not os.path.exists(self.model_save_path + self.human_model_name):
+            os.mkdir(self.model_save_path + self.human_model_name)
+        if not os.path.exists(self.log_path + self.human_model_name):
+            os.mkdir(self.log_path + self.human_model_name)
+        if not os.path.exists(self.value_path + self.human_model_name):
+            os.mkdir(self.value_path + self.human_model_name)

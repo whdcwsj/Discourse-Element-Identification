@@ -95,6 +95,7 @@ def train(model, X, Y, FT, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=
             optimizer.zero_grad()
 
             inputs, labels, tp = list2tensor(x, y, ft, model.p_embd, device)   # inputs:(30,18,40)
+            # labels:(batch_size, doc_l), tp:(batch_size, doc_l, 6)
             # 将每个embedding的ID号转换为对应的embedding
             inputs = embeddings(inputs)   # (30,18,40,768)
 
