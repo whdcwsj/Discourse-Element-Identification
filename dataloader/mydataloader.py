@@ -239,13 +239,13 @@ class BertSingleDataset(Dataset):
 
 # 一次输出batch_size个文章的Dataset
 class BertBatchDataset(Dataset):
-    def __init__(self, config, data_path, batch_size=None, is_random=False, is_valid=False):
+    def __init__(self, config, data_path, batch_size=None, is_random=False, is_valid_test=False):
         super(BertBatchDataset, self).__init__()
         self.config = config
         self.tokenizer = BertTokenizer.from_pretrained(self.config.bert_path)
         self.add_title = self.config.add_title
         # 验证集batch_size设置为1，训练集batch_size按照config来指定
-        if is_valid:
+        if is_valid_test:
             self.batch_size = batch_size
         else:
             self.batch_size = self.config.batch_size
