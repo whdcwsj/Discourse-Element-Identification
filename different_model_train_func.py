@@ -91,6 +91,20 @@ class BertTrainer:
         self.summary_file = self.config.value_path + self.config.human_model_name + '/seed_summary.csv'
         self.summary_head = 'seed_num, best_accuracy, best_macro_f1'
         self.csv_head = 'name, accuracy, all-p, all-r, all-f, macro-f, micro-f'
+        self.role_name = ['introductionSen', 'thesisSen', 'ideaSen', 'exampleSen', 'conclusionSen', 'otherSen',
+                          'evidenceSen']
+
+        if not os.path.exists(self.config.model_save_path + self.config.human_model_name):
+            os.mkdir(self.config.model_save_path + self.config.human_model_name)
+        if not os.path.exists(self.config.log_path + self.config.human_model_name):
+            os.mkdir(self.config.log_path + self.config.human_model_name)
+        if not os.path.exists(self.config.value_path + self.config.human_model_name):
+            os.mkdir(self.config.value_path + self.config.human_model_name)
+
+        # 添加每一个小类别的具体结果(precision,recall,F1)
+        for n in self.role_name:
+            for p in ['-p', '-r', '-f']:
+                self.csv_head += ', ' + n + p
 
         if self.config.add_title:
             self.regular_model_name += '_t'
@@ -104,6 +118,8 @@ class BertTrainer:
         if self.currenttime is not None and self.seed is not None:
             self.model_dir = self.config.model_save_path + self.config.human_model_name + '/' + self.regular_model_name\
                              + '-' + time.strftime('%m-%d_%H.%M', self.currenttime) + '_seed_' + str(self.seed) + '/'
+            if not os.path.isdir(self.model_dir):
+                os.mkdir(self.model_dir)
 
         if self.config.cuda:
             self.model.cuda()
@@ -179,7 +195,7 @@ class BertTrainer:
                 if accuracy > 0.6:
                     # 取每20个epoch中效果最好的
                     torch.save(self.model, self.model_dir + '%s_%d_best.pk' % (self.regular_model_name, int(epoch / 20) * 20))
-                if epoch > 200:
+                if epoch > 20:
                     # 额外记录最好的那一个
                     torch.save(self.model, self.model_dir + '%s_top.pk' % self.regular_model_name)
                     best_epoch = epoch
@@ -283,7 +299,7 @@ class BertTrainer:
 
         return accuracy, aver_loss, a
 
-    # 单个模型的测试运行
+    # 单个seed下所有模型的测试运行
     def ch_test(self, cur_model_dir, cur_seed):
 
         # 每个CSV文件的名称
@@ -302,7 +318,7 @@ class BertTrainer:
                 fname = os.path.join(cur_model_dir, file)
                 temp_model = torch.load(fname, map_location='cpu')
 
-                accuracy, _, a = BertTrainer.evaluate(is_test=True)
+                accuracy, _, a = BertTrainer.evaluate(self, is_test=True)
 
                 print(accuracy)
                 print(a)
@@ -336,7 +352,7 @@ class BertTrainer:
         return max_accurancy, max_macro_f1
 
 
-    # 测试所有模型的效果
+    # 测试并汇总所有seed下模型的测试效果
     def test_summary(self):
         i = 0
         # 存储每个seed下的accurancy和macro-f1
@@ -346,16 +362,17 @@ class BertTrainer:
         # 避免os.listdir的时候乱序读取
         path_list = os.listdir(self.model_store_dir)
         path_list.sort()
-        print(path_list)
+        # print(path_list)
 
         for seed_model_file in path_list:
             print(self.model_store_dir + seed_model_file)
             temp_dir = self.model_store_dir + seed_model_file
-            temp_seed_accu, temp_seed_macro_f1 = BertTrainer.ch_test(cur_model_dir=temp_dir, cur_seed=self.list_seed[i])
+            temp_seed_accu, temp_seed_macro_f1 = BertTrainer.ch_test(self, cur_model_dir=temp_dir, cur_seed=self.list_seed[i])
             accurancy_list.append(temp_seed_accu)
             macro_f1_list.append(temp_seed_macro_f1)
             i = i + 1
 
+        j = 0
         with open(self.summary_file, 'w', encoding='utf-8') as wf:
             wf.write(self.summary_head + '\n')
 

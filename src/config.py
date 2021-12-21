@@ -41,9 +41,3 @@ class Config:
         self.bert_path = r'/home/wsj/bert_model/chinese/bert_chinese_L-12_H-768_A-12'
         self.vocab_path = r'/home/wsj/bert_model/chinese/bert_chinese_L-12_H-768_A-12/vocab.txt'
 
-        if not os.path.exists(self.model_save_path + self.human_model_name):
-            os.mkdir(self.model_save_path + self.human_model_name)
-        if not os.path.exists(self.log_path + self.human_model_name):
-            os.mkdir(self.log_path + self.human_model_name)
-        if not os.path.exists(self.value_path + self.human_model_name):
-            os.mkdir(self.value_path + self.human_model_name)

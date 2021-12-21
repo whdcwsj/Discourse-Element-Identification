@@ -519,9 +519,9 @@ if __name__ == '__main__':
 
     # 2、测试BertBatchDataset
     config = Config(name='wsj_bert_test')
-    dev_dataset = BertBatchDataset(config=config, data_path=config.dev_data_path, is_random=True)
-    # dev_dataset = BertBatchDataset(config=config, data_path=config.dev_data_path, batch_size=1, is_random=True,
-    #                                is_valid=True)
+    # dev_dataset = BertBatchDataset(config=config, data_path=config.test_data_path, is_random=True)
+    dev_dataset = BertBatchDataset(config=config, data_path=config.test_data_path, batch_size=1, is_valid_test=True)
+    # dev_dataset = BertBatchDataset(config=config, data_path=config.dev_data_path, batch_size=1, is_valid_test=True)
 
     dataloader = DataLoader(dev_dataset, batch_size=1)
     i = 0
