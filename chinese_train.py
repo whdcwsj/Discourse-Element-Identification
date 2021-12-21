@@ -308,8 +308,8 @@ def test_dgl(model, X, Y, FT, essay_len, device='cpu', batch_n=1, title=False, i
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Chinese Discourse', usage='newtrain.py [<args>] [-h | --help]')
-    parser.add_argument('--model_type', default=2, type=int, help='set model type')
-    # 1:POS1, 2:Bottom
+    parser.add_argument('--model_type', default=3, type=int, help='set model type')
+    # 1:POS1, 3:Bottom
     parser.add_argument('--model_name', default='wsj', type=str, help='set model name')
     parser.add_argument('--seed_num', default=1, type=int, help='set seed num')
     parser.add_argument('--epoch', default=700, type=int, help='set epoch num')
@@ -379,7 +379,7 @@ if __name__ == "__main__":
                                            pool_type='max_pool', dgl_layer=dgl_layers, gcn_aggr=gcn_aggregator,
                                            weight_id=gcn_weight_id,
                                            loop=args.add_self_loop)
-    elif args.model_type == 2:
+    elif args.model_type == 3:
         # 对原始的sentence_embeeding先进行DGL，剩下的三部分均在此基础上进行
         tag_model = STWithRSbySPP_DGL_POS_Bottom(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd,
                                                  p_embd_dim=p_embd_dim,
