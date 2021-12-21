@@ -43,7 +43,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed_num', default=1, type=int, help='Set seed num.')
     args = parser.parse_args()
 
-    config = Config(name='original_bert')
+    config = Config(name='original_bert_1')
     model = OriginalBertClassification(config, bert_trainable=False).to(config.device)
     if args.action == 1:
         train_bert(model=model, config=config, seed=args.seed_num)

@@ -308,26 +308,28 @@ def test_dgl(model, X, Y, FT, essay_len, device='cpu', batch_n=1, title=False, i
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Chinese Discourse', usage='newtrain.py [<args>] [-h | --help]')
-    parser.add_argument('--model_type', default=1, type=int, help='set model type')
+    parser.add_argument('--model_type', default=2, type=int, help='set model type')
     # 1:POS1, 2:Bottom
     parser.add_argument('--model_name', default='wsj', type=str, help='set model name')
     parser.add_argument('--seed_num', default=1, type=int, help='set seed num')
     parser.add_argument('--epoch', default=700, type=int, help='set epoch num')
     parser.add_argument('--learning_rate', default=0.2, type=float, help='set learning rate')
-    parser.add_argument('--gcn_aggregator_type', default='gcn', type=str, help='set aggregator type of gcn')
+    parser.add_argument('--dgl_type', default='gcn', type=str, help='set aggregator type of gcn')
     # 'gcn','lstm','pool','mean'
     parser.add_argument('--weight_define', default=1, type=int, help='set how to define weight between nodes')
     # 1:余弦相似度，2:Pearson相似度，3:欧氏距离，4:kendall系数，
     parser.add_argument('--add_self_loop', default=0, type=int, help='whether to add self-loop in dgl')
-    # 默认不添加self-loop
+    # 默认不添加self-loop(是否额外添加自环)
+    parser.add_argument('--dgl_layer', default=1, type=int, help='set the number of dgl layers')
 
     args = parser.parse_args()
 
     seed_torch(args.seed_num)
 
     model_package_name = args.model_name
-    gcn_aggregator = args.gcn_aggregator_type
+    gcn_aggregator = args.dgl_type
     gcn_weight_id = args.weight_define
+    dgl_layers = args.dgl_layer
 
     in_file = './data/Ch_train.json'
 
@@ -355,8 +357,6 @@ if __name__ == "__main__":
 
     hidden_dim = 128
     sent_dim = 128
-
-    dgl_layers = 3
 
     p_embd = 'add'
     p_embd_dim = 16

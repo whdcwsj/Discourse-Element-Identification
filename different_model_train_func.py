@@ -204,8 +204,8 @@ class BertTrainer:
             if (aver_loss > last_loss):
                 c += 1
                 if c == 10:
-                    lr = lr * 0.95
-                    optimizer.param_groups[0]['lr'] = lr
+                    self.lr = self.lr * 0.95
+                    optimizer.param_groups[0]['lr'] = self.lr
                     c = 0
             else:
                 c = 0

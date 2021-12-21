@@ -457,8 +457,8 @@ if __name__ == "__main__":
     elif test_type_id == 3:
         # model_package = chinese_train.model_package_name
         model_base_dir = './newmodel/cn/dgl/' + model_package + '/'
-        list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
-        # list_seed = [1, 100]
+        # list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+        list_seed = [1, 100]
         new_Chinese_test(model_base_dir, list_seed, test_type_id)
 
     elif test_type_id == 4:

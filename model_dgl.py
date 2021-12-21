@@ -117,7 +117,7 @@ class STWithRSbySPP_DGL(nn.Module):
         documents = documents.view(batch_n * doc_l, sen_l, -1).transpose(0,1)  # documents: (sen_l, batch_n*doc_l, word_dim)
 
         sent_out, _ = self.sentLayer(documents, self.sent_hidden)  # sent_out: (sen_l, batch_n*doc_l, hidden_dim*2)
-        # sent_out = self.dropout(sent_out)
+        sent_out = self.dropout(sent_out)
 
         if mask is None:
             # sentpres：(batch_n*doc_l,1,256)
@@ -143,7 +143,7 @@ class STWithRSbySPP_DGL(nn.Module):
         sentpres = sentpres.transpose(0, 1)  # sentpres: (doc_l, batch_n, hidden_dim*2)
 
         tag_out, _ = self.tagLayer(sentpres, self.tag_hidden)  # tag_out: (doc_l, batch_n, sent_dim*2)
-        # tag_out = self.dropout(tag_out)
+        tag_out = self.dropout(tag_out)
 
         tag_out = torch.tanh(tag_out)
 
@@ -352,7 +352,7 @@ class STWithRSbySPP_DGL_POS1(nn.Module):
         documents = documents.view(batch_n * doc_l, sen_l, -1).transpose(0,1)  # documents: (sen_l, batch_n*doc_l, word_dim)
 
         sent_out, _ = self.sentLayer(documents, self.sent_hidden)  # sent_out: (sen_l, batch_n*doc_l, hidden_dim*2)
-        # sent_out = self.dropout(sent_out)
+        sent_out = self.dropout(sent_out)
 
         if mask is None:
             # sentpres：(batch_n*doc_l,1,256)
@@ -412,7 +412,7 @@ class STWithRSbySPP_DGL_POS1(nn.Module):
         sentpres = sentpres.transpose(0, 1)  # sentpres: (doc_l, batch_n, hidden_dim*2)
 
         tag_out, _ = self.tagLayer(sentpres, self.tag_hidden)  # tag_out: (doc_l, batch_n, sent_dim*2)
-        # tag_out = self.dropout(tag_out)
+        tag_out = self.dropout(tag_out)
 
         tag_out = torch.tanh(tag_out)
 
@@ -588,7 +588,7 @@ class STWithRSbySPP_DGL_POS_Bottom(nn.Module):
         documents = documents.view(batch_n * doc_l, sen_l, -1).transpose(0,1)  # documents: (sen_l, batch_n*doc_l, word_dim)
 
         sent_out, _ = self.sentLayer(documents, self.sent_hidden)  # sent_out: (sen_l, batch_n*doc_l, hidden_dim*2)
-        # sent_out = self.dropout(sent_out)
+        sent_out = self.dropout(sent_out)
 
         if mask is None:
             # sentpres：(batch_n*doc_l,1,256)
@@ -650,7 +650,7 @@ class STWithRSbySPP_DGL_POS_Bottom(nn.Module):
         sentpres = sentpres.transpose(0, 1)  # sentpres: (doc_l, batch_n, hidden_dim*2)
 
         tag_out, _ = self.tagLayer(sentpres, self.tag_hidden)  # tag_out: (doc_l, batch_n, sent_dim*2)
-        # tag_out = self.dropout(tag_out)
+        tag_out = self.dropout(tag_out)
 
         tag_out = torch.tanh(tag_out)
 
