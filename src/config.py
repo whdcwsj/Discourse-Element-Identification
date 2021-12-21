@@ -14,6 +14,7 @@ class Config:
         # batch_size = 20下，显存出现过不够的情况
         self.batch_size = 16
         self.add_title = True
+        self.lr = 0.2
 
         self.word_dim = 768
         self.hidden_dim = 128
@@ -24,7 +25,7 @@ class Config:
         self.pool_type = 'max_pool'
         self.bidirectional = True
 
-        self.epoch = 400
+        self.epoch = 700
 
         self.train_data_path = './data/new_Ch_train.json'
         self.dev_data_path = './data/new_Ch_dev.json'

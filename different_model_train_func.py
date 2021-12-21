@@ -93,6 +93,7 @@ class BertTrainer:
         self.csv_head = 'name, accuracy, all-p, all-r, all-f, macro-f, micro-f'
         self.role_name = ['introductionSen', 'thesisSen', 'ideaSen', 'exampleSen', 'conclusionSen', 'otherSen',
                           'evidenceSen']
+        self.lr = self.config.lr
 
         if not os.path.exists(self.config.model_save_path + self.config.human_model_name):
             os.mkdir(self.config.model_save_path + self.config.human_model_name)
@@ -138,9 +139,9 @@ class BertTrainer:
         # 参数p赋值的元素从列表model.parameters()中取。只取param.requires_grad = True(模型参数的可导性是true的元素)
         parameter = filter(lambda p: p.requires_grad, self.model.parameters())
 
-        # optimizer = optim.SGD(parameter, lr=lr)
+        optimizer = optim.SGD(parameter, lr=self.lr)
         # optimizer = optim.Adam(parameter, lr=3e-4, betas=(0.9, 0.999), eps=1e-8, weight_decay=0)
-        optimizer = optim.Adam(parameter, lr=5e-5, betas=(0.9, 0.999), eps=1e-8, weight_decay=0)
+        # optimizer = optim.Adam(parameter, lr=5e-5, betas=(0.9, 0.999), eps=1e-8, weight_decay=0)
 
         loss_list = []
         acc_list = []
@@ -200,15 +201,15 @@ class BertTrainer:
                     torch.save(self.model, self.model_dir + '%s_top.pk' % self.regular_model_name)
                     best_epoch = epoch
 
-            # if (aver_loss > last_loss):
-            #     c += 1
-            #     if c == 10:
-            #         lr = lr * 0.95
-            #         optimizer.param_groups[0]['lr'] = lr
-            #         c = 0
-            # else:
-            #     c = 0
-            #     last_loss = aver_loss
+            if (aver_loss > last_loss):
+                c += 1
+                if c == 10:
+                    lr = lr * 0.95
+                    optimizer.param_groups[0]['lr'] = lr
+                    c = 0
+            else:
+                c = 0
+                last_loss = aver_loss
 
             torch.save(self.model, self.model_dir + '%s_last.pk' % self.regular_model_name)
 
