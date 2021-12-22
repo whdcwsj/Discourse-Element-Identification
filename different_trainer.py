@@ -39,7 +39,7 @@ def test_bert(model, config, seed_list):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Chinese Discourse',
                                      usage='different_trainer.py [<args>] [-h | --help]')
-    parser.add_argument('--action', default=1, type=int, help='Train or Test.')
+    parser.add_argument('--action', default=2, type=int, help='Train or Test.')
     parser.add_argument('--seed_num', default=1, type=int, help='Set seed num.')
     args = parser.parse_args()
 

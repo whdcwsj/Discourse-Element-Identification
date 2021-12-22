@@ -234,16 +234,19 @@ class BertTrainer:
         # plt.savefig('../img/' + self.regular_model_name + '.jpg')
 
     # 验证集代码测试
-    def evaluate(self, is_test=False):
+    def evaluate(self, is_test=False, temp_model=None):
         result_list = []
         label_list = []
-        self.model.eval()
         total_loss = 0
         i = 0
+        model = self.model
         if is_test:
             data_tqdm = self.test_data
+            model = temp_model
         else:
             data_tqdm = self.dev_data
+
+        model.eval()  # 将模型转变为evaluation(测试)模式，排除BN和Dropout对测试的干扰
 
         # 冻结参数
         with torch.no_grad():
@@ -253,11 +256,11 @@ class BertTrainer:
                 labels = labels.squeeze(0)
 
                 if self.config.add_title:
-                    result = self.model(documents=token_ids, pos=pos)[:, 1:].contiguous()
+                    result = model(documents=token_ids, pos=pos)[:, 1:].contiguous()
                     # result: (batch_n, doc_l, class_n)
                     labels = labels[:, 1:].contiguous()  # labels:(batch_n, doc_l-(title))
                 else:
-                    result = self.model(documents=token_ids, pos=pos)
+                    result = model(documents=token_ids, pos=pos)
 
                 # view：把原先tensor中的数据按照行优先的顺序排成一个一维的数据，然后按照参数组合成其他维度的tensor。
                 r_n = labels.size()[0] * labels.size()[1]
@@ -317,9 +320,10 @@ class BertTrainer:
             for file in filenames:
                 print(file)
                 fname = os.path.join(cur_model_dir, file)
-                temp_model = torch.load(fname, map_location='cpu')
+                # torch.load()先在CPU上加载，不会依赖于保存模型的设备
+                temp_model = torch.load(fname, map_location='cuda')
 
-                accuracy, _, a = BertTrainer.evaluate(self, is_test=True)
+                accuracy, _, a = BertTrainer.evaluate(self, is_test=True, temp_model=temp_model)
 
                 print(accuracy)
                 print(a)

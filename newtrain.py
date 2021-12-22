@@ -94,8 +94,8 @@ def train(model, X, Y, FT, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=
 
     loss_function = nn.NLLLoss()
 
-    # optimizer = optim.SGD(model.parameters(), lr=lr)
-    optimizer = optim.Adam(model.parameters(), lr=3e-4)
+    optimizer = optim.SGD(model.parameters(), lr=lr)
+    # optimizer = optim.Adam(model.parameters(), lr=3e-4)
 
     # optimizer = ChildTuningOptimizer.ChildTuningAdamW(model.parameters(), lr=lr)
 
@@ -105,7 +105,7 @@ def train(model, X, Y, FT, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=
     c = 0
     best_epoch = -1
 
-    last_acc, _, _= test(model, X_test, Y_test, ft_test, device, title=title, is_mask=is_mask)
+    last_acc, _, _ = test(model, X_test, Y_test, ft_test, device, title=title, is_mask=is_mask)
 
     for epoch in tqdm(range(epoch_n)):
         total_loss = 0
