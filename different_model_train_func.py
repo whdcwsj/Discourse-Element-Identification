@@ -290,6 +290,7 @@ class BertTrainer:
                 t_c += 1
         accuracy = t_c / l
 
+        # 横向行是label，纵向列是pred
         # 7号是padding
         # print(a)
         # [[   0.    0.    0.    0.    0.  285.    0.    0.]
