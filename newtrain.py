@@ -27,7 +27,7 @@ plt.switch_backend('Agg')
 
 currenttime = time.localtime()
 
-model_package_name = 'wsj'
+model_package_name = 'baseline_gru_drop0.1_gate2'
 
 
 # 固定随机数种子
@@ -315,9 +315,9 @@ if __name__ == "__main__":
     # 返回：获取本文中每个句子的embedding(单词组合)，每个句子对应的label列表，每个行数据的每个句子的按顺序对应的六个特征，vec_size
     en_documents, en_labels, features, vec_size = utils.getSamplesAndFeatures(in_file, embed_filename, title=title)
 
-    print(111)
-    print(np.array(en_documents[-1]).shape)
-    print(np.array(en_labels[-1]).shape)
+    # print(111)
+    # print(np.array(en_documents[-1]).shape)
+    # print(np.array(en_labels[-1]).shape)
 
     # 返回：按照max_len长度进行处理的句子的embedding，每个句子对应的label列表
     pad_documents, pad_labels = utils.sentence_padding(en_documents, en_labels, max_len, vec_size)
@@ -349,7 +349,7 @@ if __name__ == "__main__":
         features = utils.discretePos(features)
 
     # sent_dim用于设置每个句子的维度
-    tag_model = STWithRSbySPP(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
+    tag_model = STWithRSbySPP_GRU_GATE(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
                               pool_type='max_pool')
 
     # tag_model = STWithRSbySPP_NewStructure1(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
@@ -372,7 +372,7 @@ if __name__ == "__main__":
 
     print("start Chinese model training")
     starttime = datetime.datetime.now()
-    train(tag_model, pad_documents, pad_labels, features, is_gpu, epoch_n=400, lr=0.2, batch_n=batch_n, title=title,
+    train(tag_model, pad_documents, pad_labels, features, is_gpu, epoch_n=700, lr=0.2, batch_n=batch_n, title=title,
           is_mask=is_mask)
     endtime = datetime.datetime.now()
     print("本次seed为%d的训练耗时：" % int(args.seed_num))

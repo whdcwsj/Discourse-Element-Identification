@@ -371,7 +371,7 @@ def dataSplit(X, Y, ft=None, p=0.1):
     # 返回范围[a,b]内的随机整数
     # 调训10%的数字作为验证集，也就是训练中的测试集
     test_idx = [random.randint(0,len(X)-1) for _ in range(int(len(X)*p))]
-    print(test_idx)
+    # print(test_idx)
 
     X_test = []
     Y_test = []

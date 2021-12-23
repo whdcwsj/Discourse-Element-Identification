@@ -429,7 +429,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Test Discourse', usage='newtest.py [<args>] [-h | --help]')
     parser.add_argument('--type_id', default=0, type=int, help='Set seed num.')
-    parser.add_argument('--model_name', default='original_bert', type=str, help='set model_name')
+    parser.add_argument('--model_name', default='baseline_gru_drop0.1_gate2', type=str, help='set model_name')
     args = parser.parse_args()
     model_package = args.model_name
 
