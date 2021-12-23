@@ -321,6 +321,7 @@ if __name__ == "__main__":
     parser.add_argument('--add_self_loop', default=0, type=int, help='whether to add self-loop in dgl')
     # 默认不添加self-loop(是否额外添加自环)
     parser.add_argument('--dgl_layer', default=1, type=int, help='set the number of dgl layers')
+    parser.add_argument('--window_size', default=1, type=int, help='set the size of dgl sliding window')
 
     args = parser.parse_args()
 
@@ -386,6 +387,16 @@ if __name__ == "__main__":
                                                  pool_type='max_pool', dgl_layer=dgl_layers, gcn_aggr=gcn_aggregator,
                                                  weight_id=gcn_weight_id,
                                                  loop=args.add_self_loop)
+
+    elif args.model_type == 4:
+        # 在Pos_Bottom的基础上，将DGL的构图换为连通子图
+        tag_model = STWithRSbySPP_DGL_Bottom_Sliding_Window(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd,
+                                                            p_embd_dim=p_embd_dim,
+                                                            pool_type='max_pool', dgl_layer=dgl_layers,
+                                                            gcn_aggr=gcn_aggregator,
+                                                            weight_id=gcn_weight_id,
+                                                            loop=args.add_self_loop,
+                                                            window_size=args.window_size)
 
     if p_embd == 'embd_b':
         tag_model.posLayer.init_embedding()

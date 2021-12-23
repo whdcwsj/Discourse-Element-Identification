@@ -214,9 +214,12 @@ import torch
 #     else:
 #         break
 
-wang = 0
-if wang:
-    wang = True
-else:
-    wang = False
-print(wang)
+# wang = 0
+# if wang:
+#     wang = True
+# else:
+#     wang = False
+# print(wang)
+
+for i in range(0, 3):
+    print(i)
