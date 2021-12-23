@@ -8,7 +8,7 @@ from transformers import BertModel
 
 
 class OriginalBertClassification(nn.Module):
-    def __init__(self, config: Config, bert_trainable=False):
+    def __init__(self, config: Config, bert_trainable=0):
         """
         :param word_dim: 768
         :param hidden_dim: 128
@@ -20,6 +20,10 @@ class OriginalBertClassification(nn.Module):
         """
         # p_embd: 'cat', 'add','embd', 'embd_a'
         super(OriginalBertClassification, self).__init__()
+        if bert_trainable:
+            bert_trainable = True
+        else:
+            bert_trainable = False
         self.config = config
         self.bert = BertModel.from_pretrained(config.bert_path)
         # bert模型的参数是否冻结

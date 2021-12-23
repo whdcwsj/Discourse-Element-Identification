@@ -39,12 +39,13 @@ def test_bert(model, config, seed_list):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Chinese Discourse',
                                      usage='different_trainer.py [<args>] [-h | --help]')
-    parser.add_argument('--action', default=2, type=int, help='Train or Test.')
+    parser.add_argument('--action', default=1, type=int, help='Train or Test.')
     parser.add_argument('--seed_num', default=1, type=int, help='Set seed num.')
+    parser.add_argument('--bert_trainable', default=0, type=int, help='whether bert-chinese trainable')
     args = parser.parse_args()
 
-    config = Config(name='original_bert_1')
-    model = OriginalBertClassification(config, bert_trainable=False).to(config.device)
+    config = Config(name='original_bert_1_trainable')
+    model = OriginalBertClassification(config, bert_trainable=args.bert_trainable).to(config.device)
     if args.action == 1:
         train_bert(model=model, config=config, seed=args.seed_num)
     elif args.action == 2:

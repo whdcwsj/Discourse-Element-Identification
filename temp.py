@@ -213,3 +213,10 @@ import torch
 #         print(111)
 #     else:
 #         break
+
+wang = 0
+if wang:
+    wang = True
+else:
+    wang = False
+print(wang)
