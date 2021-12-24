@@ -166,7 +166,7 @@ def train(model, X, Y, FT, essay_len, is_gpu=False, epoch_n=10, lr=0.1, batch_n=
             if accuracy > 0.6:
                 # 取每20个epoch中效果最好的
                 torch.save(model, model_dir + '%s_%d_best.pk' % (modelName, int(epoch / 20) * 20))
-            if epoch > 200:
+            if epoch > 100:
                 # 额外记录最好的那一个
                 torch.save(model, model_dir + '%s_top.pk' % modelName)
                 best_epoch = epoch
@@ -180,6 +180,7 @@ def train(model, X, Y, FT, essay_len, is_gpu=False, epoch_n=10, lr=0.1, batch_n=
         else:
             c = 0
             last_loss = aver_loss
+
         torch.save(model, model_dir + '%s_last.pk' % (modelName))
 
         if (lr < 0.0001) or (aver_loss < 0.5):
