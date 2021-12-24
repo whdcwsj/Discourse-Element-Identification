@@ -537,7 +537,7 @@ class STWithRSbySPP_NewStructure1_Gate2(nn.Module):
         # new_tag_out = torch.cat((tag_out, new_value), dim=2)  # new_tag_out:(batch,doc_l,sent_dim*2+15)
 
         # 原先的
-        new_output = torch.cat((pre_pred, new_value), dim=2)  # tag_out: (batch_n, doc_l, sent_dim*2+15)
+        new_output = torch.cat((pre_pred, new_value), dim=2)  # new_output: (batch_n, doc_l, sent_dim*2+15)
 
         # gate1
         # 相当于双线性层输出
@@ -695,7 +695,7 @@ class STWithRSbySPP_NewStructure1_Gate2_Cat2(nn.Module):
         new_tag_out = torch.cat((tag_out, new_value), dim=2)  # new_tag_out:(batch,doc_l,sent_dim*2+15)
 
         # 原先的
-        new_output = torch.cat((pre_pred, new_tag_out), dim=2)  # tag_out: (batch_n, doc_l, sent_dim*2+15)
+        new_output = torch.cat((pre_pred, new_tag_out), dim=2)  # new_output: (batch_n, doc_l, sent_dim*4+15)
 
         # gate1
         # 相当于双线性层输出

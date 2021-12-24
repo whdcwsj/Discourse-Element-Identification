@@ -428,8 +428,8 @@ if __name__ == "__main__":
     # 0是中文，1是英文，2是英文+feature
 
     parser = argparse.ArgumentParser(description='Test Discourse', usage='newtest.py [<args>] [-h | --help]')
-    parser.add_argument('--type_id', default=0, type=int, help='Set seed num.')
-    parser.add_argument('--model_name', default='newbaseline_newstructure1_gate2_cat1', type=str, help='set model_name')
+    parser.add_argument('--type_id', default=3, type=int, help='Set seed num.')
+    parser.add_argument('--model_name', default='dgl1_p4_lstm_w3', type=str, help='set model_name')
     args = parser.parse_args()
     model_package = args.model_name
 
@@ -458,7 +458,8 @@ if __name__ == "__main__":
         # model_package = chinese_train.model_package_name
         model_base_dir = './newmodel/cn/dgl/' + model_package + '/'
         # list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
-        list_seed = [1, 100]
+        # list_seed = [1, 100]
+        list_seed = [1]
         new_Chinese_test(model_base_dir, list_seed, test_type_id)
 
     elif test_type_id == 4:

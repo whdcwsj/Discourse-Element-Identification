@@ -2,6 +2,7 @@ import utils
 from model import *
 from model_gru import *
 from model_gate import *
+from model_transformer import *
 
 import numpy as np
 
