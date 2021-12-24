@@ -27,7 +27,7 @@ plt.switch_backend('Agg')
 
 currenttime = time.localtime()
 
-model_package_name = 'baseline_gru_drop0.1_gate2'
+model_package_name = 'newbaseline_newstructure1_gate2_cat1'
 
 
 # 固定随机数种子
@@ -301,7 +301,7 @@ def predict(model, x, ft, device='cpu', title=False):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Chinese Discourse', usage='newtrain.py [<args>] [-h | --help]')
-    parser.add_argument('--seed_num', default=800, type=int, help='Set seed num.')
+    parser.add_argument('--seed_num', default=1, type=int, help='Set seed num.')
     args = parser.parse_args()
 
     seed_torch(args.seed_num)
@@ -349,11 +349,14 @@ if __name__ == "__main__":
         features = utils.discretePos(features)
 
     # sent_dim用于设置每个句子的维度
-    tag_model = STWithRSbySPP_GRU_GATE(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
-                              pool_type='max_pool')
+    # tag_model = STWithRSbySPP_GRU_GATE(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
+    #                           pool_type='max_pool')
 
     # tag_model = STWithRSbySPP_NewStructure1(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
     #                           pool_type='max_pool')
+
+    tag_model = STWithRSbySPP_NewStructure1_Gate2(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
+                              pool_type='max_pool')
 
     if p_embd == 'embd_b':
         tag_model.posLayer.init_embedding()
