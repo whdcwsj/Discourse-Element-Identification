@@ -494,7 +494,6 @@ class STWithRSbySPP_NewStructure1_Gate2(nn.Module):
         sentpres = self.posLayer(sentpres, pos)  # sentpres:(batch_n, doc_l, hidden_dim*2)
         sentpres = sentpres.transpose(0, 1)  # sentpres: (doc_l, batch_n, hidden_dim*2)
 
-        # 增加一个维度
         tag_out, _ = self.tagLayer(sentpres, self.tag_hidden)  # tag_out: (doc_l, batch_n, sent_dim*2)
         tag_out = self.dropout(tag_out)  # tag_out: (doc_l, batch_n, sent_dim*2)
 

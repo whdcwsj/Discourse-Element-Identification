@@ -221,5 +221,8 @@ import torch
 #     wang = False
 # print(wang)
 
-for i in range(0, 3):
-    print(i)
+num = 3
+wang = [1,2,3]
+si = [4,5,6,7]
+
+print(wang+si)

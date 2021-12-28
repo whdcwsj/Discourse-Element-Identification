@@ -309,20 +309,25 @@ def test_dgl(model, X, Y, FT, essay_len, device='cpu', batch_n=1, title=False, i
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Chinese Discourse', usage='newtrain.py [<args>] [-h | --help]')
+    parser.add_argument('--gcn_conv_type', default=1, type=int, help='set GCNConv type.Default is SAGEConv')
+    # 0是SAGEConv，1是GATConv
     parser.add_argument('--model_type', default=4, type=int, help='set model type')
-    # 1:POS1, 3:Bottom
+    # 1:POS1, 3:Bottom， 4:Sliding window
     parser.add_argument('--model_name', default='wsj', type=str, help='set model name')
     parser.add_argument('--seed_num', default=1, type=int, help='set seed num')
     parser.add_argument('--epoch', default=700, type=int, help='set epoch num')
     parser.add_argument('--learning_rate', default=0.2, type=float, help='set learning rate')
-    parser.add_argument('--dgl_type', default='lstm', type=str, help='set aggregator type of gcn')
+    parser.add_argument('--dgl_type', default='lstm', type=str, help='set aggregator type of SAGEConv')
     # 'gcn','lstm','pool','mean'
-    parser.add_argument('--weight_define', default=1, type=int, help='set how to define weight between nodes')
+    parser.add_argument('--weight_define', default=3, type=int, help='set how to define weight between nodes'
+                                                                     ' in SAGEConv')
     # 1:余弦相似度，2:Pearson相似度，3:欧氏距离，4:kendall系数，
     parser.add_argument('--add_self_loop', default=0, type=int, help='whether to add self-loop in dgl')
     # 默认不添加self-loop(是否额外添加自环)
     parser.add_argument('--dgl_layer', default=3, type=int, help='set the number of dgl layers')
     parser.add_argument('--window_size', default=1, type=int, help='set the size of dgl sliding window')
+    parser.add_argument('--num_head', default=3, type=int, help='set the num of multi-head attention in GATConv')
+    parser.add_argument('--add_residual', default=0, type=int, help='whether to add residual in GATConv')
 
     args = parser.parse_args()
 
@@ -373,31 +378,60 @@ if __name__ == "__main__":
 
     tag_model = None
 
-    if args.model_type == 1:
-        # 右边的content self attention仍采用原始的sentence_embeeding
-        # 左边和右边的采用过了DGL之后的sentence_embeeding
-        tag_model = STWithRSbySPP_DGL_POS1(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd,
-                                           p_embd_dim=p_embd_dim,
-                                           pool_type='max_pool', dgl_layer=dgl_layers, gcn_aggr=gcn_aggregator,
-                                           weight_id=gcn_weight_id,
-                                           loop=args.add_self_loop)
-    elif args.model_type == 3:
-        # 对原始的sentence_embeeding先进行DGL，剩下的三部分均在此基础上进行
-        tag_model = STWithRSbySPP_DGL_POS_Bottom(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd,
-                                                 p_embd_dim=p_embd_dim,
-                                                 pool_type='max_pool', dgl_layer=dgl_layers, gcn_aggr=gcn_aggregator,
-                                                 weight_id=gcn_weight_id,
-                                                 loop=args.add_self_loop)
+    # SAGEConv
+    if args.gcn_conv_type == 0:
 
-    elif args.model_type == 4:
-        # 在Pos_Bottom的基础上，将DGL的构图换为连通子图
-        tag_model = STWithRSbySPP_DGL_Bottom_Sliding_Window(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd,
-                                                            p_embd_dim=p_embd_dim,
-                                                            pool_type='max_pool', dgl_layer=dgl_layers,
-                                                            gcn_aggr=gcn_aggregator,
-                                                            weight_id=gcn_weight_id,
-                                                            loop=args.add_self_loop,
-                                                            window_size=args.window_size)
+        if args.model_type == 1:
+            # 右边的content self attention仍采用原始的sentence_embeeding
+            # 左边和右边的采用过了DGL之后的sentence_embeeding
+            tag_model = STWithRSbySPP_DGL_POS1(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd,
+                                               p_embd_dim=p_embd_dim,
+                                               pool_type='max_pool',
+                                               dgl_layer=dgl_layers,
+                                               gcn_aggr=gcn_aggregator,
+                                               weight_id=gcn_weight_id,
+                                               loop=args.add_self_loop)
+        elif args.model_type == 3:
+            # 对原始的sentence_embeeding先进行DGL，剩下的三部分均在此基础上进行
+            tag_model = STWithRSbySPP_DGL_POS_Bottom(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd,
+                                                     p_embd_dim=p_embd_dim,
+                                                     pool_type='max_pool',
+                                                     dgl_layer=dgl_layers,
+                                                     gcn_aggr=gcn_aggregator,
+                                                     weight_id=gcn_weight_id,
+                                                     loop=args.add_self_loop)
+
+        elif args.model_type == 4:
+            # 在Pos_Bottom的基础上，将DGL的构图换为连通子图
+            tag_model = STWithRSbySPP_DGL_Bottom_Sliding_Window(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd,
+                                                                p_embd_dim=p_embd_dim,
+                                                                pool_type='max_pool',
+                                                                dgl_layer=dgl_layers,
+                                                                gcn_aggr=gcn_aggregator,
+                                                                weight_id=gcn_weight_id,
+                                                                loop=args.add_self_loop,
+                                                                window_size=args.window_size)
+
+    elif args.gcn_conv_type == 1:
+
+        if args.model_type == 3:
+            tag_model = STWithRSbySPP_GAT_POS_Bottom(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd,
+                                                     p_embd_dim=p_embd_dim,
+                                                     pool_type='max_pool',
+                                                     dgl_layer=dgl_layers,
+                                                     loop=args.add_self_loop,
+                                                     num_head=args.num_head,
+                                                     residual=args.add_residual)
+
+        elif args.model_type == 4:
+            tag_model = STWithRSbySPP_GAT_Bottom_Sliding_Window(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd,
+                                                                p_embd_dim=p_embd_dim,
+                                                                pool_type='max_pool',
+                                                                dgl_layer=dgl_layers,
+                                                                loop=args.add_self_loop,
+                                                                window_size=args.window_size,
+                                                                num_head=args.num_head,
+                                                                residual=args.add_residual)
 
     if p_embd == 'embd_b':
         tag_model.posLayer.init_embedding()

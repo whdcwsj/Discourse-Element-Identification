@@ -12,7 +12,10 @@ class Config:
 
         self.human_model_name = name
         # batch_size = 20下，显存出现过不够的情况
-        self.batch_size = 16
+        # Bert不训练的情况下
+        # self.batch_size = 16
+        # Bert训练的情况下
+        self.batch_size = 8
         self.add_title = True
         self.lr = 0.2
 
@@ -25,7 +28,7 @@ class Config:
         self.pool_type = 'max_pool'
         self.bidirectional = True
 
-        self.epoch = 700
+        self.epoch = 300
 
         self.train_data_path = './data/new_Ch_train.json'
         self.dev_data_path = './data/new_Ch_dev.json'

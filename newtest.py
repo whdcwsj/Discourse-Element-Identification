@@ -34,6 +34,14 @@ for n in role_name_e:
         csv_head_e += ', ' + n + p
 
 
+# 'Introduction': 0, 导言
+# 'Thesis': 1, 主题
+# 'Main Idea': 2, 主要观点
+# 'Evidence': 3, 证据
+# 'Conclusion': 4, 结论
+# 'Other': 5, 其他
+# 'Elaboration': 6, 阐述
+
 def PRF(a, ignore=[]):
     precision = []
     recall = []
@@ -44,8 +52,8 @@ def PRF(a, ignore=[]):
     TPFN = 0
 
     for i in range(len(a[0])):
-        precision.append(a[i][i] / sum(a[:, i]))
-        recall.append(a[i][i] / sum(a[i]))
+        precision.append(a[i][i] / sum(a[:, i]))   # RuntimeWarning: invalid value encountered in double_scalars
+        recall.append(a[i][i] / sum(a[i]))    # RuntimeWarning: invalid value encountered in double_scalars
         f1.append((precision[i] * recall[i] * 2) / (precision[i] + recall[i]))
         real.append(sum(a[i]))
         if i not in ignore:
@@ -429,7 +437,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Test Discourse', usage='newtest.py [<args>] [-h | --help]')
     parser.add_argument('--type_id', default=3, type=int, help='Set seed num.')
-    parser.add_argument('--model_name', default='dgl1_p4_lstm_w3', type=str, help='set model_name')
+    parser.add_argument('--model_name', default='wsj_test', type=str, help='set model_name')
     args = parser.parse_args()
     model_package = args.model_name
 
@@ -458,8 +466,8 @@ if __name__ == "__main__":
         # model_package = chinese_train.model_package_name
         model_base_dir = './newmodel/cn/dgl/' + model_package + '/'
         # list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
-        # list_seed = [1, 100]
-        list_seed = [1]
+        list_seed = [1, 100]
+        # list_seed = [1]
         new_Chinese_test(model_base_dir, list_seed, test_type_id)
 
     elif test_type_id == 4:
