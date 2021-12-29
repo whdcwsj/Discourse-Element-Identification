@@ -225,12 +225,11 @@ def new_Chinese_test(model_base_dir, seed, type_id):
         macro_f1_list.append(temp_seed_macro_f1)
         i = i + 1
 
+    summary_file = ''
     if type_id == 0:
         summary_file = './newvalue/cn/' + model_package + '/seed_summary.csv'
     elif type_id == 3:
         summary_file = './newvalue/cn/dgl/' + model_package + '/seed_summary.csv'
-    elif type_id == 4:
-        summary_file = './newvalue/cn/bert/' + model_package + '/seed_summary.csv'
 
     j = 0
     with open(summary_file, 'w', encoding='utf-8') as wf:
@@ -438,15 +437,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Test Discourse', usage='newtest.py [<args>] [-h | --help]')
     parser.add_argument('--type_id', default=3, type=int, help='Set seed num.')
     parser.add_argument('--model_name', default='wsj_test', type=str, help='set model_name')
+    parser.add_argument('--seed_length', default=11, type=int, help='set the length of seed list')
     args = parser.parse_args()
     model_package = args.model_name
-
     test_type_id = args.type_id
+    list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
 
     if test_type_id == 0:
         # model_package = newtrain.model_package_name
         model_base_dir = './newmodel/cn/' + model_package + '/'
-        list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+        list_seed = list_seed[:args.seed_length]
         # list_seed = [1, 100]
         new_Chinese_test(model_base_dir, list_seed, test_type_id)
 
@@ -465,15 +465,7 @@ if __name__ == "__main__":
     elif test_type_id == 3:
         # model_package = chinese_train.model_package_name
         model_base_dir = './newmodel/cn/dgl/' + model_package + '/'
-        # list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
-        list_seed = [1, 100]
-        # list_seed = [1]
-        new_Chinese_test(model_base_dir, list_seed, test_type_id)
-
-    elif test_type_id == 4:
-        model_base_dir = './newmodel/cn/bert/' + model_package + '/'
-        # list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
-        list_seed = [1]
+        list_seed = list_seed[:args.seed_length]
         new_Chinese_test(model_base_dir, list_seed, test_type_id)
 
 

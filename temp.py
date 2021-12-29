@@ -3,6 +3,7 @@ import random
 import math
 import dgl
 import dgl.nn.pytorch as dgltor
+import torch
 
 # jsonData = '{"a":1,"b":2,"c":3,"d":4,"e":"wsj"}'
 # text = json.loads(jsonData)
@@ -73,7 +74,6 @@ import dgl.nn.pytorch as dgltor
 # output = m(input)
 # print(output.size())
 
-import torch
 
 # x = torch.Tensor(2, 3)
 # # y = x.permute(1,0)
@@ -233,9 +233,31 @@ import torch
 # assert wang in [0, 1]
 # print(wang)
 
-g = dgl.graph(([0,1,2,3,2,5], [1,2,3,4,0,3]))
-g = dgl.add_self_loop(g)
-feat = torch.ones(6, 10)
-gatconv = dgltor.GATConv(10, 2, num_heads=3)
-res = gatconv(g, feat)
-print(res)
+# g = dgl.graph(([0,1,2,3,2,5], [1,2,3,4,0,3]))
+# g = dgl.add_self_loop(g)
+# feat = torch.ones(6, 10)
+# gatconv = dgltor.GATConv(10, 2, num_heads=5)
+# res = gatconv(g, feat)
+# print(res.shape)
+# print(res)
+# print("------------")
+
+# wang = []
+# for i in range(1):
+#     print(res[:, i:i+1, :])
+#     temp = res[:, i:i+1, :].squeeze(dim=1)
+#     print(temp)
+#     # print(temp.shape)
+#     wang.append(temp)
+# # print(wang)
+#
+# wang = torch.stack(wang)
+# print(wang.shape)
+
+
+# inner_sentennce = torch.mean(res, dim=1)
+# print(inner_sentennce.shape)
+# print(inner_sentennce)
+
+wang = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+print(wang[:11])
