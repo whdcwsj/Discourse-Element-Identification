@@ -15,7 +15,7 @@ class Config:
         # Bert不训练的情况下
         # self.batch_size = 16
         # Bert训练的情况下
-        self.batch_size = 8
+        self.batch_size = 10
         self.add_title = True
         self.lr = 0.2
 
@@ -42,6 +42,11 @@ class Config:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         # 路径前面加一个r,是为了保持路径在读取时不被漏读
-        self.bert_path = r'/home/wsj/bert_model/chinese/bert_chinese_L-12_H-768_A-12'
-        self.vocab_path = r'/home/wsj/bert_model/chinese/bert_chinese_L-12_H-768_A-12/vocab.txt'
+        # 1、谷歌的Bert_chinese
+        # self.bert_path = r'/home/wsj/bert_model/chinese/bert_chinese_L-12_H-768_A-12'
+        # self.vocab_path = r'/home/wsj/bert_model/chinese/bert_chinese_L-12_H-768_A-12/vocab.txt'
+
+        # 2、Chinese_bert_www
+        self.bert_path = r'/home/wsj/bert_model/chinese/chinese_bert_wwm_pytorch'
+        self.vocab_path = r'/home/wsj/bert_model/chinese/chinese_bert_wwm_pytorch/vocab.txt'
 

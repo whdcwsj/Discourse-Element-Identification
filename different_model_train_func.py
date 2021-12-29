@@ -139,9 +139,9 @@ class BertTrainer:
         # 参数p赋值的元素从列表model.parameters()中取。只取param.requires_grad = True(模型参数的可导性是true的元素)
         parameter = filter(lambda p: p.requires_grad, self.model.parameters())
 
-        # optimizer = optim.SGD(parameter, lr=self.lr)
+        optimizer = optim.SGD(parameter, lr=self.lr)
         # optimizer = optim.Adam(parameter, lr=3e-4, betas=(0.9, 0.999), eps=1e-8, weight_decay=0)
-        optimizer = optim.Adam(parameter, lr=5e-5, betas=(0.9, 0.999), eps=1e-8, weight_decay=0)
+        # optimizer = optim.Adam(parameter, lr=5e-5, betas=(0.9, 0.999), eps=1e-8, weight_decay=0)
 
         loss_list = []
         acc_list = []
