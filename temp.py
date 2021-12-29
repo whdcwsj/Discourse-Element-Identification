@@ -1,6 +1,8 @@
 import json
 import random
 import math
+import dgl
+import dgl.nn.pytorch as dgltor
 
 # jsonData = '{"a":1,"b":2,"c":3,"d":4,"e":"wsj"}'
 # text = json.loads(jsonData)
@@ -221,8 +223,19 @@ import torch
 #     wang = False
 # print(wang)
 
-num = 3
-wang = [1,2,3]
-si = [4,5,6,7]
+# num = 3
+# wang = [1,2,3]
+# si = [4,5,6,7]
+#
+# print(wang+si)
 
-print(wang+si)
+# wang = 0.1
+# assert wang in [0, 1]
+# print(wang)
+
+g = dgl.graph(([0,1,2,3,2,5], [1,2,3,4,0,3]))
+g = dgl.add_self_loop(g)
+feat = torch.ones(6, 10)
+gatconv = dgltor.GATConv(10, 2, num_heads=3)
+res = gatconv(g, feat)
+print(res)

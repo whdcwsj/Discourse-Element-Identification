@@ -311,7 +311,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Chinese Discourse', usage='newtrain.py [<args>] [-h | --help]')
     parser.add_argument('--gcn_conv_type', default=1, type=int, help='set GCNConv type.Default is SAGEConv')
     # 0是SAGEConv，1是GATConv
-    parser.add_argument('--model_type', default=4, type=int, help='set model type')
+    parser.add_argument('--model_type', default=3, type=int, help='set model type')
     # 1:POS1, 3:Bottom， 4:Sliding window
     parser.add_argument('--model_name', default='wsj', type=str, help='set model name')
     parser.add_argument('--seed_num', default=1, type=int, help='set seed num')
@@ -319,7 +319,7 @@ if __name__ == "__main__":
     parser.add_argument('--learning_rate', default=0.2, type=float, help='set learning rate')
     parser.add_argument('--dgl_type', default='lstm', type=str, help='set aggregator type of SAGEConv')
     # 'gcn','lstm','pool','mean'
-    parser.add_argument('--weight_define', default=3, type=int, help='set how to define weight between nodes'
+    parser.add_argument('--weight_define', default=1, type=int, help='set how to define weight between nodes'
                                                                      ' in SAGEConv')
     # 1:余弦相似度，2:Pearson相似度，3:欧氏距离，4:kendall系数，
     parser.add_argument('--add_self_loop', default=0, type=int, help='whether to add self-loop in dgl')
@@ -328,6 +328,7 @@ if __name__ == "__main__":
     parser.add_argument('--window_size', default=1, type=int, help='set the size of dgl sliding window')
     parser.add_argument('--num_head', default=3, type=int, help='set the num of multi-head attention in GATConv')
     parser.add_argument('--add_residual', default=0, type=int, help='whether to add residual in GATConv')
+    parser.add_argument('--keep_basic_feature', default=1, type=int, help='whether to keep basic feature')
 
     args = parser.parse_args()
 
@@ -399,7 +400,8 @@ if __name__ == "__main__":
                                                      dgl_layer=dgl_layers,
                                                      gcn_aggr=gcn_aggregator,
                                                      weight_id=gcn_weight_id,
-                                                     loop=args.add_self_loop)
+                                                     loop=args.add_self_loop,
+                                                     keep_basic=args.keep_basic_feature)
 
         elif args.model_type == 4:
             # 在Pos_Bottom的基础上，将DGL的构图换为连通子图
@@ -410,7 +412,8 @@ if __name__ == "__main__":
                                                                 gcn_aggr=gcn_aggregator,
                                                                 weight_id=gcn_weight_id,
                                                                 loop=args.add_self_loop,
-                                                                window_size=args.window_size)
+                                                                window_size=args.window_size,
+                                                                keep_basic=args.keep_basic_feature)
 
     elif args.gcn_conv_type == 1:
 
@@ -421,7 +424,8 @@ if __name__ == "__main__":
                                                      dgl_layer=dgl_layers,
                                                      loop=args.add_self_loop,
                                                      num_head=args.num_head,
-                                                     residual=args.add_residual)
+                                                     residual=args.add_residual,
+                                                     keep_basic=args.keep_basic_feature)
 
         elif args.model_type == 4:
             tag_model = STWithRSbySPP_GAT_Bottom_Sliding_Window(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd,
@@ -431,7 +435,8 @@ if __name__ == "__main__":
                                                                 loop=args.add_self_loop,
                                                                 window_size=args.window_size,
                                                                 num_head=args.num_head,
-                                                                residual=args.add_residual)
+                                                                residual=args.add_residual,
+                                                                keep_basic=args.keep_basic_feature)
 
     if p_embd == 'embd_b':
         tag_model.posLayer.init_embedding()
