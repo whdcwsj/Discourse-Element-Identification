@@ -437,7 +437,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Test Discourse', usage='newtest.py [<args>] [-h | --help]')
     parser.add_argument('--type_id', default=3, type=int, help='Set seed num.')
     parser.add_argument('--model_name', default='wsj_test', type=str, help='set model_name')
-    parser.add_argument('--seed_length', default=11, type=int, help='set the length of seed list')
+    parser.add_argument('--seed_start', default=0, type=int, help='set the start of seed list')
+    parser.add_argument('--seed_end', default=11, type=int, help='set the end of seed list')
     args = parser.parse_args()
     model_package = args.model_name
     test_type_id = args.type_id
@@ -446,7 +447,7 @@ if __name__ == "__main__":
     if test_type_id == 0:
         # model_package = newtrain.model_package_name
         model_base_dir = './newmodel/cn/' + model_package + '/'
-        list_seed = list_seed[:args.seed_length]
+        list_seed = list_seed[args.seed_start:args.seed_end]
         # list_seed = [1, 100]
         new_Chinese_test(model_base_dir, list_seed, test_type_id)
 
@@ -465,7 +466,7 @@ if __name__ == "__main__":
     elif test_type_id == 3:
         # model_package = chinese_train.model_package_name
         model_base_dir = './newmodel/cn/dgl/' + model_package + '/'
-        list_seed = list_seed[:args.seed_length]
+        list_seed = list_seed[args.seed_start:args.seed_end]
         new_Chinese_test(model_base_dir, list_seed, test_type_id)
 
 
