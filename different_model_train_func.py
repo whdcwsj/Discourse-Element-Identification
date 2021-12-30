@@ -243,6 +243,7 @@ class BertTrainer:
         if is_test:
             data_tqdm = self.test_data
             model = temp_model
+            seed_torch(100)
         else:
             data_tqdm = self.dev_data
 

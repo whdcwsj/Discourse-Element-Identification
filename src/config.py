@@ -13,9 +13,9 @@ class Config:
         self.human_model_name = name
         # batch_size = 20下，显存出现过不够的情况
         # Bert不训练的情况下
-        # self.batch_size = 16
+        self.batch_size = 16
         # Bert训练的情况下
-        self.batch_size = 10
+        # self.batch_size = 8
         self.add_title = True
         self.lr = 0.2
 
@@ -28,7 +28,7 @@ class Config:
         self.pool_type = 'max_pool'
         self.bidirectional = True
 
-        self.epoch = 300
+        self.epoch = 700
 
         self.train_data_path = './data/new_Ch_train.json'
         self.dev_data_path = './data/new_Ch_dev.json'
@@ -46,7 +46,7 @@ class Config:
         # self.bert_path = r'/home/wsj/bert_model/chinese/bert_chinese_L-12_H-768_A-12'
         # self.vocab_path = r'/home/wsj/bert_model/chinese/bert_chinese_L-12_H-768_A-12/vocab.txt'
 
-        # 2、Chinese_bert_www
+        # 2、Chinese_bert_wwm
         self.bert_path = r'/home/wsj/bert_model/chinese/chinese_bert_wwm_pytorch'
         self.vocab_path = r'/home/wsj/bert_model/chinese/chinese_bert_wwm_pytorch/vocab.txt'
 
