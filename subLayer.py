@@ -49,7 +49,7 @@ class PositionalEncoding(nn.Module):
 # 中文数据集：p_embd='add'，p_embd_dim=16
 # 英文数据集：p_embd = None，p_embd_dim=16
 class PositionLayer(nn.Module):
-    def __init__(self, p_embd=None, p_embd_dim=16, zero_weight=False):
+    def __init__(self, p_embd=None, p_embd_dim=16, zero_weight=False, weight_matrix=None):
         super(PositionLayer, self).__init__()
         self.p_embd = p_embd
         self.p_embd_dim = p_embd_dim
@@ -57,7 +57,14 @@ class PositionLayer(nn.Module):
         if zero_weight:
             self.pWeight = nn.Parameter(torch.zeros(3))
         else:
-            self.pWeight = nn.Parameter(torch.ones(3))
+            if weight_matrix is None:
+                self.pWeight = nn.Parameter(torch.ones(3))
+            else:
+                pWeight = torch.ones(3)
+                pWeight[0] = pWeight[0] * weight_matrix[0]
+                pWeight[1] = pWeight[1] * weight_matrix[1]
+                pWeight[2] = pWeight[2] * weight_matrix[2]
+                self.pWeight = nn.Parameter(pWeight)
         
         if p_embd == 'embd':
             # 第一个参数num_embedding词典的大小尺寸：，第二个参数embedding_dim：嵌入向量的维度
@@ -84,6 +91,7 @@ class PositionLayer(nn.Module):
         # Transformer的位置编码方法
         elif p_embd == 'embd_c':
             self.pe = PositionalEncoding(p_embd_dim, 100)
+
 
     # sentpres: (batch_n, doc_l, hidden_dim*2)
     # pos: (batch_n,doc_l,6)

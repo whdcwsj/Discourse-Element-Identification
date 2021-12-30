@@ -252,7 +252,7 @@ class STWithRSbySPP_GRU_GATE(nn.Module):
 
 
 
-# 去掉左边的element和右边的content，换成ACL2020中的方法，先只添加句子之间的attention
+# 添加句子之间的attention，获取文章编码essay_encoding
 class STWithRSbySPP_NewStructure1(nn.Module):
     def __init__(self, word_dim, hidden_dim, sent_dim, class_n, p_embd=None, pos_dim=0, p_embd_dim=16,
                  pool_type='max_pool'):

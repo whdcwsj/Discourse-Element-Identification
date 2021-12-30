@@ -4,6 +4,7 @@ import math
 import dgl
 import dgl.nn.pytorch as dgltor
 import torch
+import torch.nn as nn
 
 # jsonData = '{"a":1,"b":2,"c":3,"d":4,"e":"wsj"}'
 # text = json.loads(jsonData)
@@ -259,5 +260,14 @@ import torch
 # print(inner_sentennce.shape)
 # print(inner_sentennce)
 
-wang = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
-print(wang[:11])
+# pWeight = torch.ones(3)
+# weight = [1, 2, 3]
+# pWeight[0] = pWeight[0] * weight[0]
+# pWeight[1] = pWeight[1] * weight[1]
+# pWeight[2] = pWeight[2] * weight[2]
+# pWeight = nn.Parameter(pWeight)
+# print(pWeight)
+# print(pWeight[0])
+
+pos_weight = [1, 1, 1]
+assert len(pos_weight) == 3

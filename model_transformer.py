@@ -71,16 +71,8 @@ class STWithRSbySPP_Transformer(nn.Module):
         self.init_hidden(batch_n=batch_n, doc_l=doc_l, device=device)
         documents = documents.view(batch_n * doc_l, sen_l, -1).transpose(0,1)  # documents: (sen_l, batch_n*doc_l, word_dim)
 
-        # 双向nn.LSTM()
-        # input：(40,batch_n*doc_l,200) → (seq_len, batch, input_size)
-        # (h_0,c_0)：h_0是隐藏层的初始状态，c_0是初始化的细胞状态
-        # 这两者shape均为: (num_layers * num_directions, batch, hidden_size)
-        # 输出：output,(h_n,c_n)
-        # output保存RNN最后一层的输出的Tensor，(seq_len, batch, hidden_size * num_directions) → (40,batch_n*doc_l,hidden_dim*2)
-        # (h_n，c_n):保存着RNN最后一个时间步的隐藏层状态；保存着RNN最后一个时间步的细胞状态
-        # shape：(num_layers * num_directions, batch, hidden_size)
         sent_out, _ = self.sentLayer(documents, self.sent_hidden)  # sent_out: (sen_l, batch_n*doc_l, hidden_dim*2)
-        # sent_out = self.dropout(sent_out)
+        sent_out = self.dropout(sent_out)
 
         if mask is None:
             # sentpres：(batch_n*doc_l,1,256)
@@ -100,12 +92,8 @@ class STWithRSbySPP_Transformer(nn.Module):
         sentpres = self.posLayer(sentpres, pos)  # sentpres:(batch_n, doc_l, hidden_dim*2)
         sentpres = sentpres.transpose(0, 1)  # sentpres: (doc_l, batch_n, hidden_dim*2)
 
-        # LSTM(self.hidden_dim*2, self.sent_dim, bidirectional=True)
-        # input：(seq_len, batch, input_size)，input_size应该=LSTM的第一个参数，也就是self.hidden_dim*2
-        # (h_0,c_0)：(num_layers * num_directions, batch, hidden_size)
-        # output: (seq_len, batch, sent_dim * num_directions)
         tag_out, _ = self.tagLayer(sentpres, self.tag_hidden)  # tag_out: (doc_l, batch_n, sent_dim*2)
-        # tag_out = self.dropout(tag_out)
+        tag_out = self.dropout(tag_out)
 
         tag_out = torch.tanh(tag_out)
 

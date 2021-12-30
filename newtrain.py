@@ -350,6 +350,13 @@ if __name__ == "__main__":
         # 返回大于等于该数值的最小整数
         features = utils.discretePos(features)
 
+    # 尝试三个相对位置的初始权重大小对模型性能的影响，虽然感觉比较离谱
+    # 'gpos', 'lpos', 'ppos'
+    # 全局位置，局部位置，段落位置
+    pos_weight = [3, 1, 1]
+    assert len(pos_weight) == 3
+
+
     # sent_dim用于设置每个句子的维度
     # tag_model = STWithRSbySPP_GRU_GATE(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
     #                           pool_type='max_pool')
@@ -357,8 +364,11 @@ if __name__ == "__main__":
     # tag_model = STWithRSbySPP_NewStructure1(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
     #                           pool_type='max_pool')
 
-    tag_model = STWithRSbySPP_NewStructure1_Gate2(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
-                              pool_type='max_pool')
+    # tag_model = STWithRSbySPP_NewStructure1_Gate2(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
+    #                           pool_type='max_pool')
+
+    tag_model = STWithRSbySPP_Weight(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
+                               pool_type='max_pool', weight_matrix=pos_weight)
 
     if p_embd == 'embd_b':
         tag_model.posLayer.init_embedding()
