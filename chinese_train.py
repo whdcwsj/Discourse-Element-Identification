@@ -79,7 +79,8 @@ def train(model, X, Y, FT, essay_len, is_gpu=False, epoch_n=10, lr=0.1, batch_n=
         modelName += '_t'
 
     writer = SummaryWriter(
-        './newlog/cn/dgl/' + model_package_name + '/cn_' + modelName + '_' + time.strftime('%m-%d_%H.%M', currenttime))
+        './newlog/cn/dgl/' + model_package_name + '/cn_' + modelName + '_' + time.strftime('%m-%d_%H.%M', currenttime)
+        + '_seed_' + str(args.seed_num))
 
     # 10%的数据作为验证集
     X_train, Y_train, ft_train, essay_len_train, X_test, Y_test, ft_test, essay_len_test = utils.dataSplit_dgl(X, Y, FT,

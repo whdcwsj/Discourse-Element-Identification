@@ -79,7 +79,8 @@ def train(model, X, Y, FT, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=
     if title:
         modelName += '_t'
 
-    writer = SummaryWriter('./newlog/cn/' +  model_package_name + '/cn_' + modelName + '_' + time.strftime('%m-%d_%H.%M', currenttime))
+    writer = SummaryWriter('./newlog/cn/' +  model_package_name + '/cn_' + modelName + '_' +
+                           time.strftime('%m-%d_%H.%M', currenttime) + '_seed_' + str(args.seed_num))
 
     print(len(X))
 

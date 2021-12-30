@@ -112,7 +112,8 @@ class BertTrainer:
 
         if self.add_writer:
             self.writer = SummaryWriter(log_dir=self.config.log_path + config.human_model_name + '/cn_' +
-                                    self.regular_model_name + '_' + time.strftime('%m-%d_%H.%M', self.currenttime))
+                          self.regular_model_name + '_' + time.strftime('%m-%d_%H.%M', self.currenttime)
+                                                + '_seed_' + str(self.seed))
 
         self.model_store_dir = self.config.model_save_path + self.config.human_model_name + '/'
 

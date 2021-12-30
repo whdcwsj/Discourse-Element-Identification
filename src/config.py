@@ -13,9 +13,9 @@ class Config:
         self.human_model_name = name
         # batch_size = 20下，显存出现过不够的情况
         # Bert不训练的情况下
-        self.batch_size = 16
+        # self.batch_size = 16
         # Bert训练的情况下
-        # self.batch_size = 8
+        self.batch_size = 8
         self.add_title = True
         self.lr = 0.2
 
