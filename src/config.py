@@ -46,6 +46,7 @@ class Config:
         # self.bert_path = r'/home/wsj/bert_model/chinese/bert_chinese_L-12_H-768_A-12'
         # self.vocab_path = r'/home/wsj/bert_model/chinese/bert_chinese_L-12_H-768_A-12/vocab.txt'
 
+
         # 2、Chinese_bert_wwm
         self.bert_path = r'/home/wsj/bert_model/chinese/chinese_bert_wwm_pytorch'
         self.vocab_path = r'/home/wsj/bert_model/chinese/chinese_bert_wwm_pytorch/vocab.txt'
