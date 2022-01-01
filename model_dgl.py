@@ -459,7 +459,7 @@ class STWithRSbySPP_DGL_POS1(nn.Module):
 # 对原始的sentence_embeeding先进行DGL，剩下的三部分均在此基础上进行
 class STWithRSbySPP_DGL_POS_Bottom(nn.Module):
     def __init__(self, word_dim, hidden_dim, sent_dim, class_n, p_embd=None, pos_dim=0, p_embd_dim=16,
-                 pool_type='max_pool', dgl_layer=1, gcn_aggr='gcn', weight_id=1, loop=0, keep_basic=1):
+                 pool_type='max_pool', dgl_layer=1, gcn_aggr='gcn', weight_id=1, loop=0):
         # p_embd: 'cat', 'add','embd', 'embd_a'
         super(STWithRSbySPP_DGL_POS_Bottom, self).__init__()
         self.word_dim = word_dim
@@ -501,8 +501,6 @@ class STWithRSbySPP_DGL_POS_Bottom(nn.Module):
 
         self.edge_weight_id = weight_id
         self.gcn_loop = loop
-        assert keep_basic in [0, 1]
-        self.keep_basic = int(keep_basic)
 
         # 是否添加norm，后续需要进行尝试:'right'或者'none',default='both'
         # gcn 聚合可以理解为周围所有的邻居结合和当前节点的均值
@@ -511,7 +509,7 @@ class STWithRSbySPP_DGL_POS_Bottom(nn.Module):
              for _ in range(dgl_layer)])
 
         self.transition_layer = nn.Sequential(
-            nn.Linear(self.sent_dim * 2 * (dgl_layer + self.keep_basic), self.sent_dim * 2),
+            nn.Linear(self.sent_dim * 2 * (dgl_layer + 1), self.sent_dim * 2),
             nn.ReLU(),
             nn.Dropout(0.1)
         )
@@ -623,9 +621,7 @@ class STWithRSbySPP_DGL_POS_Bottom(nn.Module):
             # build graph
             graph, edge_weight = self.build_graph(inner_sentennce, node_length, device=device)
 
-            current_essay_sentence = []
-            if self.keep_basic:
-                current_essay_sentence = [inner_sentennce]
+            current_essay_sentence = [inner_sentennce]
             # try add different GCN，句间交互
             for sage_gcn in self.SAGE_GCN:
                 # 输出：(node_nums, self.hidden_dim * 2)
@@ -700,7 +696,7 @@ class STWithRSbySPP_DGL_POS_Bottom(nn.Module):
 # 将原本的全联通图改为滑动窗口大小的部分小的连通图
 class STWithRSbySPP_DGL_Bottom_Sliding_Window(nn.Module):
     def __init__(self, word_dim, hidden_dim, sent_dim, class_n, p_embd=None, pos_dim=0, p_embd_dim=16,
-                 pool_type='max_pool', dgl_layer=1, gcn_aggr='gcn', weight_id=1, loop=0, window_size=1, keep_basic=1):
+                 pool_type='max_pool', dgl_layer=1, gcn_aggr='gcn', weight_id=1, loop=0, window_size=1):
         # p_embd: 'cat', 'add','embd', 'embd_a'
         super(STWithRSbySPP_DGL_Bottom_Sliding_Window, self).__init__()
         self.word_dim = word_dim
@@ -743,8 +739,6 @@ class STWithRSbySPP_DGL_Bottom_Sliding_Window(nn.Module):
 
         self.edge_weight_id = weight_id
         self.gcn_loop = loop
-        assert keep_basic in [0, 1]
-        self.keep_basic = int(keep_basic)
 
         # 是否添加norm，后续需要进行尝试:'right'或者'none',default='both'
         # gcn 聚合可以理解为周围所有的邻居结合和当前节点的均值
@@ -753,7 +747,7 @@ class STWithRSbySPP_DGL_Bottom_Sliding_Window(nn.Module):
              for _ in range(dgl_layer)])
 
         self.transition_layer = nn.Sequential(
-            nn.Linear(self.sent_dim * 2 * (dgl_layer + self.keep_basic), self.sent_dim * 2),
+            nn.Linear(self.sent_dim * 2 * (dgl_layer + 1), self.sent_dim * 2),
             nn.ReLU(),
             nn.Dropout(0.1)
         )
@@ -866,9 +860,7 @@ class STWithRSbySPP_DGL_Bottom_Sliding_Window(nn.Module):
             # build graph
             graph, edge_weight = self.build_graph(inner_sentennce, node_length, device=device)
 
-            current_essay_sentence = []
-            if self.keep_basic:
-                current_essay_sentence = [inner_sentennce]
+            current_essay_sentence = [inner_sentennce]
             # try add different GCN，句间交互
             for sage_gcn in self.SAGE_GCN:
                 # 输出：(node_nums, self.hidden_dim * 2)
@@ -943,7 +935,7 @@ class STWithRSbySPP_DGL_Bottom_Sliding_Window(nn.Module):
 
 class STWithRSbySPP_GAT_POS_Bottom(nn.Module):
     def __init__(self, word_dim, hidden_dim, sent_dim, class_n, p_embd=None, pos_dim=0, p_embd_dim=16,
-                 pool_type='max_pool', dgl_layer=1, loop=0, num_head=3, residual=0, keep_basic=1):
+                 pool_type='max_pool', dgl_layer=1, loop=0, num_head=3, residual=0):
         # p_embd: 'cat', 'add','embd', 'embd_a'
         super(STWithRSbySPP_GAT_POS_Bottom, self).__init__()
         self.word_dim = word_dim
@@ -989,8 +981,6 @@ class STWithRSbySPP_GAT_POS_Bottom(nn.Module):
             self.residual = True
         else:
             self.residual = False
-        assert keep_basic in [0, 1]
-        self.keep_basic = int(keep_basic)
 
         # num_heads多头注意力个数，是否残差连接(默认False)，negative_slope默认0.2(LeakyReLU激活函数的负向参数)
         self.GAT_GCN = nn.ModuleList(
@@ -1000,7 +990,7 @@ class STWithRSbySPP_GAT_POS_Bottom(nn.Module):
              for _ in range(dgl_layer)])
 
         self.transition_layer = nn.Sequential(
-            nn.Linear(self.sent_dim * 2 * (dgl_layer + self.keep_basic), self.sent_dim * 2),
+            nn.Linear(self.sent_dim * 2 * (dgl_layer + 1), self.sent_dim * 2),
             nn.ReLU(),
             nn.Dropout(0.1)
         )
@@ -1081,9 +1071,7 @@ class STWithRSbySPP_GAT_POS_Bottom(nn.Module):
             # GAT构图不需要额外处理边的类型
             graph = self.build_graph(node_length, device=device)
 
-            current_essay_sentence = []
-            if self.keep_basic:
-                current_essay_sentence = [inner_sentennce]
+            current_essay_sentence = [inner_sentennce]
             # try add different GCN，句间交互
             for gat_gcn in self.GAT_GCN:
                 # 输出：(node_nums, self.hidden_dim * 2)
@@ -1160,7 +1148,7 @@ class STWithRSbySPP_GAT_POS_Bottom(nn.Module):
 
 class STWithRSbySPP_GAT_Bottom_Sliding_Window(nn.Module):
     def __init__(self, word_dim, hidden_dim, sent_dim, class_n, p_embd=None, pos_dim=0, p_embd_dim=16,
-                 pool_type='max_pool', dgl_layer=1, loop=0, window_size=1, num_head=3, residual=0, keep_basic=1):
+                 pool_type='max_pool', dgl_layer=1, loop=0, window_size=1, num_head=3, residual=0):
         # p_embd: 'cat', 'add','embd', 'embd_a'
         super(STWithRSbySPP_GAT_Bottom_Sliding_Window, self).__init__()
         self.word_dim = word_dim
@@ -1207,8 +1195,6 @@ class STWithRSbySPP_GAT_Bottom_Sliding_Window(nn.Module):
             self.residual = True
         else:
             self.residual = False
-        assert keep_basic in [0, 1]
-        self.keep_basic = int(keep_basic)
 
         # num_heads多头注意力个数，是否残差连接(默认False)，negative_slope默认0.2(LeakyReLU激活函数的负向参数)
         self.GAT_GCN = nn.ModuleList(
@@ -1218,7 +1204,7 @@ class STWithRSbySPP_GAT_Bottom_Sliding_Window(nn.Module):
              for _ in range(dgl_layer)])
 
         self.transition_layer = nn.Sequential(
-            nn.Linear(self.sent_dim * 2 * (dgl_layer + self.keep_basic), self.sent_dim * 2),
+            nn.Linear(self.sent_dim * 2 * (dgl_layer + 1), self.sent_dim * 2),
             nn.ReLU(),
             nn.Dropout(0.1)
         )
@@ -1300,9 +1286,7 @@ class STWithRSbySPP_GAT_Bottom_Sliding_Window(nn.Module):
             # GAT构图不需要额外处理边的类型
             graph = self.build_graph(node_length, device=device)
 
-            current_essay_sentence = []
-            if self.keep_basic:
-                current_essay_sentence = [inner_sentennce]
+            current_essay_sentence = [inner_sentennce]
             # try add different GCN，句间交互
             for gat_gcn in self.GAT_GCN:
                 # 输出：(node_nums, self.hidden_dim * 2)

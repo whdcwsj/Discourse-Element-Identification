@@ -329,7 +329,7 @@ if __name__ == "__main__":
     parser.add_argument('--window_size', default=1, type=int, help='set the size of dgl sliding window')
     parser.add_argument('--num_head', default=3, type=int, help='set the num of multi-head attention in GATConv')
     parser.add_argument('--add_residual', default=0, type=int, help='whether to add residual in GATConv')
-    parser.add_argument('--keep_basic_feature', default=1, type=int, help='whether to keep basic feature')
+    # parser.add_argument('--keep_basic_feature', default=1, type=int, help='whether to keep basic feature')
 
     args = parser.parse_args()
 
@@ -401,8 +401,7 @@ if __name__ == "__main__":
                                                      dgl_layer=dgl_layers,
                                                      gcn_aggr=gcn_aggregator,
                                                      weight_id=gcn_weight_id,
-                                                     loop=args.add_self_loop,
-                                                     keep_basic=args.keep_basic_feature)
+                                                     loop=args.add_self_loop)
 
         elif args.model_type == 4:
             # 在Pos_Bottom的基础上，将DGL的构图换为连通子图
@@ -413,8 +412,7 @@ if __name__ == "__main__":
                                                                 gcn_aggr=gcn_aggregator,
                                                                 weight_id=gcn_weight_id,
                                                                 loop=args.add_self_loop,
-                                                                window_size=args.window_size,
-                                                                keep_basic=args.keep_basic_feature)
+                                                                window_size=args.window_size)
 
     elif args.gcn_conv_type == 1:
 
@@ -425,8 +423,7 @@ if __name__ == "__main__":
                                                      dgl_layer=dgl_layers,
                                                      loop=args.add_self_loop,
                                                      num_head=args.num_head,
-                                                     residual=args.add_residual,
-                                                     keep_basic=args.keep_basic_feature)
+                                                     residual=args.add_residual)
 
         elif args.model_type == 4:
             tag_model = STWithRSbySPP_GAT_Bottom_Sliding_Window(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd,
@@ -436,8 +433,7 @@ if __name__ == "__main__":
                                                                 loop=args.add_self_loop,
                                                                 window_size=args.window_size,
                                                                 num_head=args.num_head,
-                                                                residual=args.add_residual,
-                                                                keep_basic=args.keep_basic_feature)
+                                                                residual=args.add_residual)
 
     if p_embd == 'embd_b':
         tag_model.posLayer.init_embedding()
