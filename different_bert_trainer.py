@@ -37,7 +37,7 @@ def test_bert(model, config, seed_list):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Chinese Discourse',
                                      usage='different_trainer.py [<args>] [-h | --help]')
-    parser.add_argument('--action', default=1, type=int, help='Train or Test.')
+    parser.add_argument('--action', default=2, type=int, help='Train or Test.')
     parser.add_argument('--seed_num', default=1, type=int, help='Set seed num.')
     parser.add_argument('--bert_trainable', default=1, type=int, help='whether bert-chinese trainable')
     args = parser.parse_args()
@@ -48,5 +48,5 @@ if __name__ == '__main__':
         train_bert(model=model, config=config, seed=args.seed_num)
     elif args.action == 2:
         # 一定要在这里指定随机数种子的列表啊，！！！
-        seed_list = [1, 100]
+        seed_list = [1]
         test_bert(model=model, config=config, seed_list=seed_list)

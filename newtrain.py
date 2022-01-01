@@ -28,7 +28,7 @@ plt.switch_backend('Agg')
 
 currenttime = time.localtime()
 
-model_package_name = 'newbaseline_newstructure1_gate2_cat1'
+model_package_name = 'newbaseline_stress_gid'
 
 
 # 固定随机数种子
@@ -98,7 +98,6 @@ def train(model, X, Y, FT, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=
 
     optimizer = optim.SGD(model.parameters(), lr=lr)
     # optimizer = optim.Adam(model.parameters(), lr=3e-4)
-
     # optimizer = ChildTuningOptimizer.ChildTuningAdamW(model.parameters(), lr=lr)
 
     loss_list = []

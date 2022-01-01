@@ -142,7 +142,9 @@ def chEncodeBert(documents, tokenizer):
         essay_token_id = []
         # 每个句子
         for j in range(len(cn_document[i])):
+            # 分词
             seq = tokenizer.tokenize(''.join(cn_document[i][j]))
+            # 词转换为Bert ID
             sentence_id = tokenizer.convert_tokens_to_ids(seq)
             essay_token_id.append(sentence_id)
         document_token_id.append(essay_token_id)
@@ -517,54 +519,99 @@ if __name__ == '__main__':
 
 
 
-    # 2、测试BertBatchDataset
-    config = Config(name='wsj_bert_test')
-    # dev_dataset = BertBatchDataset(config=config, data_path=config.test_data_path, is_random=True)
-    dev_dataset = BertBatchDataset(config=config, data_path=config.test_data_path, batch_size=1, is_valid_test=True)
-    # dev_dataset = BertBatchDataset(config=config, data_path=config.dev_data_path, batch_size=1, is_valid_test=True)
+    # # 2、测试BertBatchDataset
+    # config = Config(name='wsj_bert_test')
+    # # dev_dataset = BertBatchDataset(config=config, data_path=config.test_data_path, is_random=True)
+    # dev_dataset = BertBatchDataset(config=config, data_path='../data/Ch_test.json', batch_size=1, is_valid_test=True)
+    # # dev_dataset = BertBatchDataset(config=config, data_path=config.dev_data_path, batch_size=1, is_valid_test=True)
+    #
+    # dataloader = DataLoader(dev_dataset, batch_size=1)
+    # i = 0
+    # token_ids = None
+    # pos = None
+    # label = None
+    # for data in dataloader:
+    #     if i == 0:
+    #         token_ids, pos, label = data
+    #
+    #         # print(token_ids.shape)  # torch.Size([1, 30, 25, 40])
+    #         # print(pos.shape)  # torch.Size([1, 30, 25, 6])
+    #         # print(label.shape)  # torch.Size([1, 30, 25])
+    #     i += 1
+    #
+    # print("原始的shape:")
+    # print(token_ids.shape)
+    # print(pos.shape)
+    # print(label.shape)
+    #
+    # new_token_id = token_ids.squeeze(0)
+    # print(new_token_id.shape)
+    #
+    # print("------------------")
+    # # print(new_token_id[0])
+    #
+    # # bert的输出：last_hidden_state, pooler_output, all_hidden_states, all_attentions
+    # # 1、last_hidden_state：shape是(batch_size, sequence_length, hidden_size)，hidden_size=768，它是模型最后一层输出的隐藏状态
+    # # 2、pooler_output：shape是(batch_size, hidden_size)，这是序列的第一个token(classification token)的最后一层的隐藏状态；代表该句句子向量【CLS】
+    # # 3、hidden_states：输出可选项，如果输出，需要指定config.output_hidden_states=True
+    # # 它也是一个元组，它的第一个元素是embedding，其余元素是各层的输出，每个元素的形状是(batch_size, sequence_length, hidden_size)
+    # # 4、attentions：输出可选项，如果输出，需要指定config.output_attentions=True
+    # # 它也是一个元组，它的元素是每一层的注意力权重，用于计算self-attention heads的加权平均值
+    #
+    # bert_temp = BertModel.from_pretrained(config.bert_path).to(config.device)
+    #
+    # temp_batch_output = []
+    # for i in range(new_token_id.shape[0]):
+    #     embedding = bert_temp(new_token_id[i])
+    #     last_hidden_state = embedding[0]
+    #     last_hidden_state = last_hidden_state.to(config.device)
+    #     temp_batch_output.append(last_hidden_state)
+    #
+    # batch_bert_output = torch.stack(temp_batch_output, dim=0)
+    # print(batch_bert_output.shape)
+    # print(111)
 
-    dataloader = DataLoader(dev_dataset, batch_size=1)
-    i = 0
-    token_ids = None
-    pos = None
-    label = None
-    for data in dataloader:
-        if i == 0:
-            token_ids, pos, label = data
+    tokenizer = BertTokenizer(r'/home/wsj/bert_model/chinese/chinese_bert_wwm_pytorch/vocab.txt')
 
-            # print(token_ids.shape)  # torch.Size([1, 30, 25, 40])
-            # print(pos.shape)  # torch.Size([1, 30, 25, 6])
-            # print(label.shape)  # torch.Size([1, 30, 25])
-        i += 1
+    # 返回每篇文章：句子列表(带titile)，每句话的标签列表，每个句子的按顺序对应的六个特征
+    document, labels, pos_features = loadDataAndFeature('../data/Ch_test.json', title=True)
 
-    print("原始的shape:")
-    print(token_ids.shape)
-    print(pos.shape)
-    print(label.shape)
+    # documents = documents[-2:]
+    temp_document = document[-1]
 
-    new_token_id = token_ids.squeeze(0)
-    print(new_token_id.shape)
+    documents = []
 
-    print("------------------")
-    # print(new_token_id[0])
+    documents.append(temp_document)
 
-    # bert的输出：last_hidden_state, pooler_output, all_hidden_states, all_attentions
-    # 1、last_hidden_state：shape是(batch_size, sequence_length, hidden_size)，hidden_size=768，它是模型最后一层输出的隐藏状态
-    # 2、pooler_output：shape是(batch_size, hidden_size)，这是序列的第一个token(classification token)的最后一层的隐藏状态；代表该句句子向量【CLS】
-    # 3、hidden_states：输出可选项，如果输出，需要指定config.output_hidden_states=True
-    # 它也是一个元组，它的第一个元素是embedding，其余元素是各层的输出，每个元素的形状是(batch_size, sequence_length, hidden_size)
-    # 4、attentions：输出可选项，如果输出，需要指定config.output_attentions=True
-    # 它也是一个元组，它的元素是每一层的注意力权重，用于计算self-attention heads的加权平均值
+    # 1、字词拼接
+    cn_document = []
 
-    bert_temp = BertModel.from_pretrained(config.bert_path).to(config.device)
+    # 每篇文章
+    for essay in documents:
+        essay_document = []
+        # 每句话
+        for i in range(len(essay)):
+            # 每句话都放在一个列表中
+            out_sentence = []
+            temp_string = ''
+            # 每句话中的单词
+            for j in range(len(essay[i])):
+                temp_string = temp_string + essay[i][j]
+            out_sentence.append(temp_string)
+            essay_document.append(out_sentence)
 
-    temp_batch_output = []
-    for i in range(new_token_id.shape[0]):
-        embedding = bert_temp(new_token_id[i])
-        last_hidden_state = embedding[0]
-        last_hidden_state = last_hidden_state.to(config.device)
-        temp_batch_output.append(last_hidden_state)
+        cn_document.append(essay_document)
 
-    batch_bert_output = torch.stack(temp_batch_output, dim=0)
-    print(batch_bert_output.shape)
-    print(111)
+    # 2、将子词列表转化为id的列表，无[CLS]和[SEP]
+    document_token_id = []
+    # 每篇文章
+    for i in range(len(cn_document)):
+        essay_token_id = []
+        # 每个句子
+        for j in range(len(cn_document[i])):
+            # 分词
+            seq = tokenizer.tokenize(''.join(cn_document[i][j]))
+            # 词转换为Bert ID
+            sentence_id = tokenizer.convert_tokens_to_ids(seq)
+            essay_token_id.append(sentence_id)
+        document_token_id.append(essay_token_id)
