@@ -463,7 +463,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     model_package = args.model_name
     test_type_id = args.type_id
-    seed_torch(1)
+    seed_torch(100)
     list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
 
     if test_type_id == 0:
