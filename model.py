@@ -110,7 +110,7 @@ class STWithRSbySPP(nn.Module):
         self.p_embd_dim = p_embd_dim
         self.pool_type = pool_type
 
-        # self.dropout = nn.Dropout(0.1)
+        self.dropout = nn.Dropout(0.1)
         self.sentLayer = nn.LSTM(self.word_dim, self.hidden_dim, bidirectional=True)
         # 为什么sent_dim*2+30？？？因为要接两个句间注意力
         self.classifier = nn.Linear(self.sent_dim * 2 + 30, self.class_n)
@@ -167,7 +167,7 @@ class STWithRSbySPP(nn.Module):
         # (h_n，c_n):保存着RNN最后一个时间步的隐藏层状态；保存着RNN最后一个时间步的细胞状态
         # shape：(num_layers * num_directions, batch, hidden_size)
         sent_out, _ = self.sentLayer(documents, self.sent_hidden)  # sent_out: (sen_l, batch_n*doc_l, hidden_dim*2)
-        # sent_out = self.dropout(sent_out)
+        sent_out = self.dropout(sent_out)
 
         if mask is None:
             # sentpres：(batch_n*doc_l,1,256)
@@ -192,7 +192,7 @@ class STWithRSbySPP(nn.Module):
         # (h_0,c_0)：(num_layers * num_directions, batch, hidden_size)
         # output: (seq_len, batch, sent_dim * num_directions)
         tag_out, _ = self.tagLayer(sentpres, self.tag_hidden)  # tag_out: (doc_l, batch_n, sent_dim*2)
-        # tag_out = self.dropout(tag_out)
+        tag_out = self.dropout(tag_out)
 
         tag_out = torch.tanh(tag_out)
 

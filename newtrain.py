@@ -28,7 +28,7 @@ plt.switch_backend('Agg')
 
 currenttime = time.localtime()
 
-model_package_name = 'newbaseline_stress_gid'
+# model_package_name = 'newbaseline_stress_gid'
 
 
 # 固定随机数种子
@@ -303,8 +303,12 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Chinese Discourse', usage='newtrain.py [<args>] [-h | --help]')
     parser.add_argument('--seed_num', default=1, type=int, help='Set seed num.')
+    parser.add_argument('--weight_id', default=1, type=int, help='choose position weight.')
+    parser.add_argument('--model_package_name', default='newbaseline_try2', type=str, help='set model name.')
+
     args = parser.parse_args()
 
+    model_package_name = args.model_package_name
     seed_torch(args.seed_num)
 
     in_file = './data/new_Ch_train.json'
@@ -352,8 +356,12 @@ if __name__ == "__main__":
     # 尝试三个相对位置的初始权重大小对模型性能的影响，虽然感觉比较离谱
     # 'gpos', 'lpos', 'ppos'
     # 全局位置，局部位置，段落位置
-    pos_weight = [3, 1, 1]
-    assert len(pos_weight) == 3
+    if args.weight_id == 1:
+        pos_weight = [1, 3, 1]
+    elif args.weight_id == 2:
+        pos_weight = [1, 1, 3]
+
+    # assert len(pos_weight) == 3
 
 
     # sent_dim用于设置每个句子的维度
@@ -366,8 +374,11 @@ if __name__ == "__main__":
     # tag_model = STWithRSbySPP_NewStructure1_Gate2(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
     #                           pool_type='max_pool')
 
-    tag_model = STWithRSbySPP_Weight(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
-                               pool_type='max_pool', weight_matrix=pos_weight)
+    # tag_model = STWithRSbySPP_Weight(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
+    #                            pool_type='max_pool', weight_matrix=pos_weight)
+
+    tag_model = STWithRSbySPP(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim,
+                              pool_type='max_pool')
 
     if p_embd == 'embd_b':
         tag_model.posLayer.init_embedding()

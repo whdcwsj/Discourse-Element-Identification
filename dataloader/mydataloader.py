@@ -332,6 +332,98 @@ class BertBatchDataset(Dataset):
 
 
 
+# 正规的Bert数据加载装置，自带attention_mask
+class BertFormalBatchDataset(Dataset):
+    def __init__(self, config, data_path, batch_size=None, is_random=False, is_valid_test=False):
+        super(BertFormalBatchDataset, self).__init__()
+        self.config = config
+        self.tokenizer = BertTokenizer.from_pretrained(self.config.bert_path)
+        self.add_title = self.config.add_title
+        # 验证集batch_size设置为1，训练集batch_size按照config来指定
+        if is_valid_test:
+            self.batch_size = batch_size
+        else:
+            self.batch_size = self.config.batch_size
+        self.is_random = is_random
+
+        # 返回每篇文章：句子列表(带titile)，每句话的标签列表，每个句子的按顺序对应的六个特征
+        documents, labels, self.pos_features = loadDataAndFeature(data_path, title=self.add_title)
+        # pos_features: [0.0625, 1.0, 0.2, 1, 1, 1]
+
+        # 拼接中文字词，变成Bert的ID
+        self.cn_document, self.document_token_id = chEncodeBert(documents=documents, tokenizer=self.tokenizer)
+
+        # 填充，每个句子最多四十个词
+        self.pad_document_id = essaySentencePaddingId(self.document_token_id)
+
+        # 所有文章，每片文章中所有句子的label，从文字转换为id
+        self.cn_labels = labelEncode(labels)  # [7, 1, 2, 3, 6, 2, 2, 3, 3, 2, 3, 2, 4, 4, 4, 4, 4]
+
+    def __getitem__(self, item):
+
+        # print("item:")
+        # print(item)
+        # print(type(item))
+
+        data = list(zip(self.pad_document_id, self.cn_labels, self.pos_features))
+        # 按文章句子个数从短到长排序
+        data.sort(key=lambda x: len(x[0]))
+
+        # 随机获取一个起始的ID
+        start_id = item * self.batch_size
+        if self.is_random:
+            random.seed()
+            # [a,b]
+            mid = random.randint(0, len(self.pad_document_id) - 1)
+            start = max(0, mid - int(self.batch_size / 2))
+            # math.ceil()向上取整
+            end = min(len(self.pad_document_id), mid + math.ceil(self.batch_size / 2))
+        else:
+            start = start_id
+            end = start_id + self.batch_size
+
+        batch_data = data[start: end]
+
+        batch_document, batch_label, batch_feature = zip(*batch_data)
+        # 输出的：<class 'tuple'>,需要列表化
+        batch_feature = list(batch_feature)
+        batch_document = list(batch_document)
+        batch_label = list(batch_label)
+
+        # 记录一个batch中文章包含的最长句子个数
+        max_len_essay = len(batch_document[-1])
+
+        # 如果当前批次句子长度均都一样
+        if len(batch_document[0]) == max_len_essay:
+            pass
+        else:
+            # 每个句子的单词数量
+            sen_len = len(batch_document[0][0])
+            # 特征的数量
+            ft_len = len(batch_feature[0][0])
+            # 遍历batch中的每篇文章
+            for j in range(len(batch_document)):
+                if len(batch_document[j]) < max_len_essay:
+                    # 记录当前文章的句子数量
+                    temp_l = len(batch_document[j])
+                    batch_document[j] = batch_document[j] + [PADDING * sen_len] * (max_len_essay - temp_l)
+                    batch_label[j] = batch_label[j] + [LABELPAD] * (max_len_essay - temp_l)
+                    batch_feature[j] = batch_feature[j] + [PADDING * ft_len] * (max_len_essay - temp_l)
+                else:
+                    # 长度相同，则可以跳出本层for循环
+                    break
+
+        # 格式转换
+        pad_token_id = torch.tensor(batch_document, dtype=torch.int, device=self.config.device)
+        pos_item = torch.tensor(batch_feature, dtype=torch.float, device=self.config.device)[:, :, :6]
+        label_item = torch.tensor(batch_label, dtype=torch.long, device=self.config.device)
+
+        return pad_token_id, pos_item, label_item
+
+    def __len__(self):
+        return int(math.ceil(len(self.pad_document_id)/self.batch_size))
+
+
 if __name__ == '__main__':
 
     # tokenizer = BertTokenizer.from_pretrained(r'/home/wsj/bert_model/chinese/bert_chinese_L-12_H-768_A-12')
@@ -571,17 +663,16 @@ if __name__ == '__main__':
     # print(batch_bert_output.shape)
     # print(111)
 
-    tokenizer = BertTokenizer(r'/home/wsj/bert_model/chinese/chinese_bert_wwm_pytorch/vocab.txt')
+    tokenizer = BertTokenizer.from_pretrained(r'/home/wsj/bert_model/chinese/chinese_bert_wwm_pytorch')
 
     # 返回每篇文章：句子列表(带titile)，每句话的标签列表，每个句子的按顺序对应的六个特征
     document, labels, pos_features = loadDataAndFeature('../data/Ch_test.json', title=True)
 
-    # documents = documents[-2:]
-    temp_document = document[-1]
+    documents = document[-2:]
 
-    documents = []
-
-    documents.append(temp_document)
+    # temp_document = document[-1]
+    # documents = []
+    # documents.append(temp_document)
 
     # 1、字词拼接
     cn_document = []
@@ -602,16 +693,29 @@ if __name__ == '__main__':
 
         cn_document.append(essay_document)
 
-    # 2、将子词列表转化为id的列表，无[CLS]和[SEP]
+    # 2、将子词列表转化为id的列表，带[CLS]和[SEP]
     document_token_id = []
+    document_mask = []
     # 每篇文章
     for i in range(len(cn_document)):
         essay_token_id = []
+        essay_attention_mask = []
         # 每个句子
         for j in range(len(cn_document[i])):
-            # 分词
-            seq = tokenizer.tokenize(''.join(cn_document[i][j]))
-            # 词转换为Bert ID
-            sentence_id = tokenizer.convert_tokens_to_ids(seq)
-            essay_token_id.append(sentence_id)
+            # max_length：序列的最大长度
+            # add_special_tokens：是否在序列前添加 [CLS]，结尾添加 [SEP]
+            # truncation_strategy：当传入 max_length 时，这个参数才生效，表示截断策略
+            # padding：是否填充
+            # return_tensors：返回的张量类型(两种：'tf'/'pt')
+            # tokenized = tokenizer(cn_document[i][j], max_length=100, add_special_tokens=True, truncation=True, padding=True, return_tensors="pt")
+            tokenized = tokenizer(cn_document[i][j], return_tensors="pt")
+            token_ids = tokenized['input_ids']
+            masks = tokenized['attention_mask']
+
+            essay_token_id.append(token_ids)
+            essay_attention_mask.append(masks)
+
         document_token_id.append(essay_token_id)
+        document_mask.append(essay_attention_mask)
+
+    print(111)

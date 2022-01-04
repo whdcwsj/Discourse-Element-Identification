@@ -8,6 +8,17 @@ import newtrain_en
 import newtrain_en_ft
 import argparse
 
+
+# 固定随机数种子
+def seed_torch(seed=1):
+    os.environ['PYTHONHASHSEED'] = str(seed)  # 为了禁止hash随机化，使得实验可复现
+    np.random.seed(seed)
+    torch.manual_seed(seed)  # 为CPU设置随机种子
+    torch.cuda.manual_seed(seed)  # 为当前GPU设置随机种子
+    torch.cuda.manual_seed_all(seed)  # if you are using multi-GPU，为所有GPU设置随机种子
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+
 np.set_printoptions(suppress=True)
 
 role_name = ['introductionSen',
@@ -205,6 +216,14 @@ def Chinese_test(model_dir, seed, chinese_type_id):
         return temp_accurancy, temp_macro_f1
 
 
+
+# 自定义排序函数
+# 因为不同时间训练的模型的前缀训练时间不同，而我们只需要根据seed的不同大小进行排序
+def compare(s):
+    seed_s = int(s.split('seed_')[1])
+    return seed_s
+
+
 def new_Chinese_test(model_base_dir, seed, type_id):
     model_base = model_base_dir
     seed_list = seed
@@ -214,9 +233,11 @@ def new_Chinese_test(model_base_dir, seed, type_id):
     accurancy_list = []
     macro_f1_list = []
 
+    # ['dgl_st_rs_sppm_128_128_ap-01-02_21.49_seed_200', 'dgl_st_rs_sppm_128_128_ap-01-03_02.37_seed_300', 'dgl_st_rs_sppm_128_128_ap-01-03_07.26_seed_400',
+    # 'dgl_st_rs_sppm_128_128_ap-01-03_12.15_seed_500', 'dgl_st_rs_sppm_128_128_ap-12-24_21.40_seed_1', 'dgl_st_rs_sppm_128_128_ap-12-25_01.35_seed_100']
     # 避免os.listdir的时候乱序读取
     path_list = os.listdir(model_base)
-    path_list.sort()
+    path_list = sorted(path_list, key=compare)
 
     for model_file in path_list:
         print(model_base+model_file)
@@ -436,12 +457,13 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Test Discourse', usage='newtest.py [<args>] [-h | --help]')
     parser.add_argument('--type_id', default=3, type=int, help='Set seed num.')
-    parser.add_argument('--model_name', default='wsj_test', type=str, help='set model_name')
+    parser.add_argument('--model_name', default='dgl1_p4_lstm_w1_size1', type=str, help='set model_name')
     parser.add_argument('--seed_start', default=0, type=int, help='set the start of seed list')
-    parser.add_argument('--seed_end', default=11, type=int, help='set the end of seed list')
+    parser.add_argument('--seed_end', default=6, type=int, help='set the end of seed list')
     args = parser.parse_args()
     model_package = args.model_name
     test_type_id = args.type_id
+    seed_torch(1)
     list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
 
     if test_type_id == 0:

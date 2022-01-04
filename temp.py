@@ -6,6 +6,7 @@ import dgl.nn.pytorch as dgltor
 import torch
 import torch.nn as nn
 
+
 # jsonData = '{"a":1,"b":2,"c":3,"d":4,"e":"wsj"}'
 # text = json.loads(jsonData)
 # print(text)
@@ -269,5 +270,23 @@ import torch.nn as nn
 # print(pWeight)
 # print(pWeight[0])
 
-pos_weight = [1, 1, 1]
-assert len(pos_weight) == 3
+# pos_weight = [1, 1, 1]
+# assert len(pos_weight) == 3
+
+
+def compare(s):
+    seed_s = int(s.split('seed_')[1])
+    return seed_s
+
+
+path_list = ['dgl_st_rs_sppm_128_128_ap-01-02_21.49_seed_200', 'dgl_st_rs_sppm_128_128_ap-01-03_02.37_seed_300',
+             'dgl_st_rs_sppm_128_128_ap-01-03_07.26_seed_400',
+             'dgl_st_rs_sppm_128_128_ap-01-03_12.15_seed_500', 'dgl_st_rs_sppm_128_128_ap-12-24_21.40_seed_1',
+             'dgl_st_rs_sppm_128_128_ap-12-25_01.35_seed_100']
+
+path_list = sorted(path_list, key=compare)
+print(path_list)
+
+# temp = 'dgl_st_rs_sppm_128_128_ap-01-02_21.49_seed_200'
+# wang = int(temp.split('seed_')[1])
+# print(wang)

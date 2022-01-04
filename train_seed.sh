@@ -11,4 +11,4 @@ python3 newtrain.py --seed_num 700
 python3 newtrain.py --seed_num 800
 python3 newtrain.py --seed_num 900
 python3 newtrain.py --seed_num 1000
-python3 newtest.py --type_id 0 --seed_length 11 --model_name newbaseline_stress_gid
+python3 newtest.py --type_id 0 --seed_start 0 --seed_end 11 --model_name newbaseline_try2
