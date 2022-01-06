@@ -310,9 +310,10 @@ def test_dgl(model, X, Y, FT, essay_len, device='cpu', batch_n=1, title=False, i
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Chinese Discourse', usage='newtrain.py [<args>] [-h | --help]')
-    parser.add_argument('--gcn_conv_type', default=1, type=int, help='set GCNConv type.Default is SAGEConv')
+    parser.add_argument('--gcn_conv_type', default=3, type=int, help='set GCNConv type.Default is SAGEConv')
     # 0是SAGEConv，1是GATConv
-    parser.add_argument('--model_type', default=3, type=int, help='set model type')
+    # 2是SAGEConv+门控，3是GATConv+门控
+    parser.add_argument('--model_type', default=4, type=int, help='set model type')
     # 1:POS1, 3:Bottom， 4:Sliding window
     parser.add_argument('--model_name', default='wsj', type=str, help='set model name')
     parser.add_argument('--seed_num', default=1, type=int, help='set seed num')
@@ -393,6 +394,7 @@ if __name__ == "__main__":
                                                gcn_aggr=gcn_aggregator,
                                                weight_id=gcn_weight_id,
                                                loop=args.add_self_loop)
+
         elif args.model_type == 3:
             # 对原始的sentence_embeeding先进行DGL，剩下的三部分均在此基础上进行
             tag_model = STWithRSbySPP_DGL_POS_Bottom(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd,
@@ -434,6 +436,54 @@ if __name__ == "__main__":
                                                                 window_size=args.window_size,
                                                                 num_head=args.num_head,
                                                                 residual=args.add_residual)
+
+    # SAGEConv+Gate
+    elif args.gcn_conv_type == 2:
+
+        if args.model_type == 3:
+            # 对原始的sentence_embeeding先进行DGL，剩下的三部分均在此基础上进行
+            tag_model = STWithRSbySPP_DGL_POS_Bottom_Gate(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd,
+                                                          p_embd_dim=p_embd_dim,
+                                                          pool_type='max_pool',
+                                                          dgl_layer=dgl_layers,
+                                                          gcn_aggr=gcn_aggregator,
+                                                          weight_id=gcn_weight_id,
+                                                          loop=args.add_self_loop)
+
+        elif args.model_type == 4:
+            # 在Pos_Bottom的基础上，将DGL的构图换为连通子图
+            tag_model = STWithRSbySPP_DGL_Bottom_Sliding_Window_Gate(vec_size, hidden_dim, sent_dim, class_n,
+                                                                     p_embd=p_embd,
+                                                                     p_embd_dim=p_embd_dim,
+                                                                     pool_type='max_pool',
+                                                                     dgl_layer=dgl_layers,
+                                                                     gcn_aggr=gcn_aggregator,
+                                                                     weight_id=gcn_weight_id,
+                                                                     loop=args.add_self_loop,
+                                                                     window_size=args.window_size)
+
+    # GATConv+Gate
+    elif args.gcn_conv_type == 3:
+
+        if args.model_type == 3:
+            tag_model = STWithRSbySPP_GAT_POS_Bottom(vec_size, hidden_dim, sent_dim, class_n, p_embd=p_embd,
+                                                     p_embd_dim=p_embd_dim,
+                                                     pool_type='max_pool',
+                                                     dgl_layer=dgl_layers,
+                                                     loop=args.add_self_loop,
+                                                     num_head=args.num_head,
+                                                     residual=args.add_residual)
+
+        elif args.model_type == 4:
+            tag_model = STWithRSbySPP_GAT_Bottom_Sliding_Window_Gate(vec_size, hidden_dim, sent_dim, class_n,
+                                                                     p_embd=p_embd,
+                                                                     p_embd_dim=p_embd_dim,
+                                                                     pool_type='max_pool',
+                                                                     dgl_layer=dgl_layers,
+                                                                     loop=args.add_self_loop,
+                                                                     window_size=args.window_size,
+                                                                     num_head=args.num_head,
+                                                                     residual=args.add_residual)
 
     if p_embd == 'embd_b':
         tag_model.posLayer.init_embedding()
