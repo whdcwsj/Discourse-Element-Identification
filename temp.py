@@ -274,19 +274,52 @@ import torch.nn as nn
 # assert len(pos_weight) == 3
 
 
-def compare(s):
-    seed_s = int(s.split('seed_')[1])
-    return seed_s
-
-
-path_list = ['dgl_st_rs_sppm_128_128_ap-01-02_21.49_seed_200', 'dgl_st_rs_sppm_128_128_ap-01-03_02.37_seed_300',
-             'dgl_st_rs_sppm_128_128_ap-01-03_07.26_seed_400',
-             'dgl_st_rs_sppm_128_128_ap-01-03_12.15_seed_500', 'dgl_st_rs_sppm_128_128_ap-12-24_21.40_seed_1',
-             'dgl_st_rs_sppm_128_128_ap-12-25_01.35_seed_100']
-
-path_list = sorted(path_list, key=compare)
-print(path_list)
+# def compare(s):
+#     seed_s = int(s.split('seed_')[1])
+#     return seed_s
+#
+#
+# path_list = ['dgl_st_rs_sppm_128_128_ap-01-02_21.49_seed_200', 'dgl_st_rs_sppm_128_128_ap-01-03_02.37_seed_300',
+#              'dgl_st_rs_sppm_128_128_ap-01-03_07.26_seed_400',
+#              'dgl_st_rs_sppm_128_128_ap-01-03_12.15_seed_500', 'dgl_st_rs_sppm_128_128_ap-12-24_21.40_seed_1',
+#              'dgl_st_rs_sppm_128_128_ap-12-25_01.35_seed_100']
+#
+# path_list = sorted(path_list, key=compare)
+# print(path_list)
 
 # temp = 'dgl_st_rs_sppm_128_128_ap-01-02_21.49_seed_200'
 # wang = int(temp.split('seed_')[1])
 # print(wang)
+
+
+import copy
+
+a = [1, 2, 3, 4, ['a', 'b']]  # 原始对象
+
+b = a  # 赋值，传对象的引用
+c = copy.copy(a)  # 对象拷贝，浅拷贝
+d = copy.deepcopy(a)  # 对象拷贝，深拷贝
+
+a.append(5)  # 修改对象a
+a[4].append('c')  # 修改对象a中的['a', 'b']数组对象
+
+# a.remove(['a', 'b'])
+
+print('a = ', a )
+print(id(a))
+ # a =  [1, 2, 3, 4, ['a', 'b', 'c'], 5]
+print('b = ', b)
+print(id(b))
+  # b =  [1, 2, 3, 4, ['a', 'b', 'c'], 5]
+print('c = ', c)
+print(id(c))
+  # c =  [1, 2, 3, 4, ['a', 'b', 'c']]
+print('d = ', d)
+print(id(d))
+  # d =  [1, 2, 3, 4, ['a', 'b']]
+
+c[4].remove('a')
+print('c = ', c)
+
+
+
