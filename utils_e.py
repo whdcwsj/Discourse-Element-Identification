@@ -104,7 +104,8 @@ def getEnglishSamplesBertId(in_file, tokenizer, title=False, is_word=False):
     return en_documents, en_labels, features
 
 
-# n_l = 40, is_cutoff=True
+# 每个句子的最大长度n_l:40，不足的补[0]
+# is_cutoff=True
 def sentencePaddingId(en_documents, labels, n_l, is_cutoff=True):
     pad_documents = []
     # 每行
@@ -120,6 +121,33 @@ def sentencePaddingId(en_documents, labels, n_l, is_cutoff=True):
         pad_documents.append(out_sentences)
     pad_labels = labels
     return pad_documents, pad_labels
+
+
+# 每个句子的最大长度n_l:40，不足的补[0]
+# is_cutoff=True
+def sentencePaddingId_dgl(en_documents, labels, n_l, is_cutoff=True):
+    pad_documents = []
+    # 记录每篇文章的实际句子长度，避免虚拟句子节点对结果的干扰
+    out_essay_length = []
+    # 每行/每篇文章
+    for sentences in en_documents:
+        # 每篇文章的实际句子个数
+        length = len(sentences)
+        out_essay_length.append(int(length))
+        out_sentences = []
+        # 每个句子
+        for sentence in sentences:
+            # 长度不等于0/n_l的情况
+            # len(sentence) 相当于每个句子中的单词数
+            # 补全至n_l个长度
+            if len(sentence) % n_l:
+                sentence = sentence + PADDING * (n_l - len(sentence) % n_l)
+            # 每句话截断保留前n_l个单词
+            if is_cutoff:
+                out_sentences.append(sentence[0: n_l])
+        pad_documents.append(out_sentences)
+    pad_labels = labels
+    return pad_documents, pad_labels, out_essay_length
 
 
 # 输入：每个行数据的每个句子的按顺序对应的六个特征，获取本文中每个句子的embedding的id号，每个句子对应的label列表，Bert的tokenizer
@@ -249,3 +277,45 @@ def batchGeneratorId(en_documents, labels, features, batch_n, is_random=False):
                 else:
                     break
             yield b_docs, b_labs, b_ft
+
+
+def batchGeneratorId_dgl(en_documents, labels, features, essay_length, batch_n, is_random=False):
+    data = list(zip(en_documents, labels, features, essay_length))
+
+    data.sort(key=lambda x: len(x[0]))
+    # 多少篇文章
+    for i in range(0, len(en_documents), batch_n):
+        if is_random:
+            random.seed()
+            mid = random.randint(0, len(en_documents) - 1)
+            # print(mid)
+            start = max(0, mid - int(batch_n / 2))
+            # math.ceil()向上取整
+            end = min(len(en_documents), mid + math.ceil(batch_n / 2))
+        else:
+            start = i
+            end = i + batch_n
+
+        b_data = data[start: end]
+
+        b_docs, b_labs, b_ft, b_essay_length = zip(*b_data)
+        b_ft = list(b_ft)
+        b_docs = list(b_docs)
+        b_labs = list(b_labs)
+        b_essay_length = list(b_essay_length)
+        max_len = len(b_docs[-1])
+
+        if len(b_docs[0]) == max_len:
+            yield b_docs, b_labs, b_ft, b_essay_length
+        else:
+            sen_len = len(b_docs[0][0])
+            ft_len = len(b_ft[0][0])
+            for j in range(len(b_docs)):
+                if len(b_docs[j]) < max_len:
+                    l = len(b_docs[j])
+                    b_docs[j] = b_docs[j] + [PADDING * sen_len] * (max_len - l)
+                    b_labs[j] = b_labs[j] + [LABELPAD] * (max_len - l)
+                    b_ft[j] = b_ft[j] + [PADDING * ft_len] * (max_len - l)
+                else:
+                    break
+            yield b_docs, b_labs, b_ft, b_essay_length

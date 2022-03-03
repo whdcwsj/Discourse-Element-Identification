@@ -324,8 +324,8 @@ def test_all_e(test, newdir, w_file, data, title=False, is_mask=False, embedding
     return max_accurancy, max_macro_f1
 
 
-def English_test(model_dir, seed):
-    import utils_e as utils
+def English_test(model_dir, seed, english_type_id):
+    import utils_e
     from transformers import BertTokenizer
     in_file = './data/En_test.json'
     title = True
@@ -337,18 +337,18 @@ def English_test(model_dir, seed):
     BERT_PATH = '/home/wsj/bert_model/bert-base-uncased'
     tokenizer = BertTokenizer.from_pretrained(BERT_PATH)
 
-    en_documents, en_labels, features = utils.getEnglishSamplesBertId(in_file, tokenizer, title=title, is_word=is_word)
-    pad_documents, pad_labels = utils.sentencePaddingId(en_documents, en_labels, max_len)
+    en_documents, en_labels, features = utils_e.getEnglishSamplesBertId(in_file, tokenizer, title=title, is_word=is_word)
+    pad_documents, pad_labels = utils_e.sentencePaddingId(en_documents, en_labels, max_len)
 
-    from newtrain_en import test
-    w_file = './newvalue/en/' + model_package + '/%s_seed_%d.csv' % (in_file.split('.')[1].split('/')[-1], seed)
+    from newtrain_en import test_dgl
+    w_file = './newvalue/en/dgl/' + model_package + '/%s_seed_%d.csv' % (in_file.split('.')[1].split('/')[-1], seed)
     ignore = []
 
-    temp_accurancy, temp_macro_f1 = test_all_e(test, model_dir, w_file, (pad_documents, pad_labels, features), title, embeddings=embeddings)
+    temp_accurancy, temp_macro_f1 = test_all_e(test_dgl, model_dir, w_file, (pad_documents, pad_labels, features), title, embeddings=embeddings)
     return temp_accurancy, temp_macro_f1
 
 
-def new_English_test(model_base_dir, seed):
+def new_English_test(model_base_dir, seed, type_id):
     model_base = model_base_dir
     seed_list = seed
     i = 0
@@ -363,12 +363,17 @@ def new_English_test(model_base_dir, seed):
 
     for model_file in path_list:
         print(model_base+model_file)
-        temp_seed_accu, temp_seed_macro_f1 = English_test(model_base+model_file, seed_list[i])
+        temp_seed_accu, temp_seed_macro_f1 = English_test(model_base+model_file, seed_list[i], type_id)
         accurancy_list.append(temp_seed_accu)
         macro_f1_list.append(temp_seed_macro_f1)
         i = i + 1
 
-    summary_file = './newvalue/en/' + model_package + '/seed_summary.csv'
+    summary_file = ''
+    if type_id == 1:
+        summary_file = './newvalue/en/' + model_package + '/seed_summary.csv'
+    elif type_id == 4:
+        summary_file = './newvalue/en/dgl/' + model_package + '/seed_summary.csv'
+
 
     j = 0
     with open(summary_file, 'w', encoding='utf-8') as wf:
@@ -453,11 +458,11 @@ def new_English_feature_test(model_base_dir, seed):
 
 if __name__ == "__main__":
     # 调用这个目录下的所有模型进行test
-    # 0是中文，1是英文，2是英文+feature
+    # 0是中文，1是英文，2是英文+feature，3是中文+dgl，4是英文+dgl
 
     parser = argparse.ArgumentParser(description='Test Discourse', usage='newtest.py [<args>] [-h | --help]')
-    parser.add_argument('--type_id', default=3, type=int, help='Set seed num.')
-    parser.add_argument('--model_name', default='dgl1_p4_lstm_w1_size1', type=str, help='set model_name')
+    parser.add_argument('--type_id', default=4, type=int, help='Set seed num.')
+    parser.add_argument('--model_name', default='wsj', type=str, help='set model_name')
     parser.add_argument('--seed_start', default=0, type=int, help='set the start of seed list')
     parser.add_argument('--seed_end', default=6, type=int, help='set the end of seed list')
     args = parser.parse_args()
@@ -490,6 +495,12 @@ if __name__ == "__main__":
         model_base_dir = './newmodel/cn/dgl/' + model_package + '/'
         list_seed = list_seed[args.seed_start:args.seed_end]
         new_Chinese_test(model_base_dir, list_seed, test_type_id)
+
+    elif test_type_id == 4:
+        model_package = newtrain_en.model_package_name
+        model_base_dir = './newmodel/en/dgl/' + model_package + '/'
+        list_seed = list_seed[args.seed_start:args.seed_end]
+        new_English_test(model_base_dir, list_seed, test_type_id)
 
 
     # model_dir = './model/roles/st_rs_sppm_128_128_ap_211106182840/'

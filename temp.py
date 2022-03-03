@@ -305,21 +305,22 @@ a[4].append('c')  # 修改对象a中的['a', 'b']数组对象
 
 # a.remove(['a', 'b'])
 
-print('a = ', a )
-print(id(a))
- # a =  [1, 2, 3, 4, ['a', 'b', 'c'], 5]
-print('b = ', b)
-print(id(b))
-  # b =  [1, 2, 3, 4, ['a', 'b', 'c'], 5]
-print('c = ', c)
-print(id(c))
-  # c =  [1, 2, 3, 4, ['a', 'b', 'c']]
-print('d = ', d)
-print(id(d))
-  # d =  [1, 2, 3, 4, ['a', 'b']]
+# print('a = ', a )
+# print(id(a))
+#  # a =  [1, 2, 3, 4, ['a', 'b', 'c'], 5]
+# print('b = ', b)
+# print(id(b))
+#   # b =  [1, 2, 3, 4, ['a', 'b', 'c'], 5]
+# print('c = ', c)
+# print(id(c))
+#   # c =  [1, 2, 3, 4, ['a', 'b', 'c']]
+# print('d = ', d)
+# print(id(d))
+#   # d =  [1, 2, 3, 4, ['a', 'b']]
+#
+# c[4].remove('a')
+# print('c = ', c)
 
-c[4].remove('a')
-print('c = ', c)
-
+print(torch.cuda.is_available())
 
 

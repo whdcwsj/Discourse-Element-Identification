@@ -214,7 +214,7 @@ if __name__ == "__main__":
     # tag_model = STWithRSbySPP(embeddings.embedding_dim, hidden_dim, sent_dim, class_n, p_embd=p_embd, p_embd_dim=p_embd_dim, pool_type='max_pool')
     tag_model = EnSTWithRSbySPP_GATE(embeddings.embedding_dim, hidden_dim, sent_dim, class_n, p_embd=p_embd,
                               p_embd_dim=p_embd_dim, pool_type='max_pool')
-
+2
     class_n = 4
     model_dir = './model/e_roles_%d/%s_%s/' % (class_n, tag_model.getModelName(), datetime.datetime.now().strftime('%y%m%d%H%M%S'))
     if not os.path.isdir(model_dir):
