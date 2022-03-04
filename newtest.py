@@ -270,7 +270,8 @@ def new_Chinese_test(model_base_dir, seed, type_id):
 
 
 def test_all_e(test, newdir, w_file, data, title=False, is_mask=False, embeddings=None, ignore=[]):
-    pad_documents, pad_labels, features = data
+
+    pad_documents, pad_labels, features, essay_length = data
 
     with open(w_file, 'w', encoding='utf-8') as wf:
         wf.write(csv_head_e + '\n')
@@ -285,7 +286,7 @@ def test_all_e(test, newdir, w_file, data, title=False, is_mask=False, embedding
             print(file)
             tag_model = torch.load(fname, map_location='cpu')
 
-            accuracy, a = test(tag_model, pad_documents, pad_labels, features, 'cpu', batch_n=1, title=title,
+            accuracy, loss, a = test(tag_model, pad_documents, pad_labels, features, essay_length, 'cpu', batch_n=1, title=title,
                                embeddings=embeddings)
 
             print(accuracy)
@@ -334,17 +335,18 @@ def English_test(model_dir, seed, english_type_id):
 
     embeddings = torch.load('./embd/bert-base-uncased-word_embeddings.pkl')
 
-    BERT_PATH = '/home/wsj/bert_model/bert-base-uncased'
+    BERT_PATH = './bert/bert-base-uncased'
     tokenizer = BertTokenizer.from_pretrained(BERT_PATH)
 
     en_documents, en_labels, features = utils_e.getEnglishSamplesBertId(in_file, tokenizer, title=title, is_word=is_word)
-    pad_documents, pad_labels = utils_e.sentencePaddingId(en_documents, en_labels, max_len)
+    pad_documents, pad_labels, essay_length = utils_e.sentencePaddingId_dgl(en_documents, en_labels, max_len)
 
     from newtrain_en import test_dgl
     w_file = './newvalue/en/dgl/' + model_package + '/%s_seed_%d.csv' % (in_file.split('.')[1].split('/')[-1], seed)
     ignore = []
 
-    temp_accurancy, temp_macro_f1 = test_all_e(test_dgl, model_dir, w_file, (pad_documents, pad_labels, features), title, embeddings=embeddings)
+    temp_accurancy, temp_macro_f1 = test_all_e(test_dgl, model_dir, w_file, (pad_documents, pad_labels, features,
+                                                                             essay_length), title, embeddings=embeddings)
     return temp_accurancy, temp_macro_f1
 
 
@@ -402,7 +404,7 @@ def English_test_ft(model_dir, seed):
 
     embeddings = torch.load('./embd/bert-base-uncased-word_embeddings.pkl')
 
-    BERT_PATH = '/home/wsj/bert_model/bert-base-uncased'
+    BERT_PATH = './bert/bert-base-uncased'
     tokenizer = BertTokenizer.from_pretrained(BERT_PATH)
 
     en_documents, en_labels, features = utils.getEnglishSamplesBertId(in_file, tokenizer, title=title, is_word=is_word)
@@ -497,7 +499,7 @@ if __name__ == "__main__":
         new_Chinese_test(model_base_dir, list_seed, test_type_id)
 
     elif test_type_id == 4:
-        model_package = newtrain_en.model_package_name
+        # model_package = newtrain_en.model_package_name
         model_base_dir = './newmodel/en/dgl/' + model_package + '/'
         list_seed = list_seed[args.seed_start:args.seed_end]
         new_English_test(model_base_dir, list_seed, test_type_id)

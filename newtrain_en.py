@@ -28,7 +28,7 @@ plt.switch_backend('Agg')
 currenttime = time.localtime()
 
 # model_package_name = 'new_baseline0.67_gate2'
-model_package_name = 'wsj'
+# model_package_name = 'dgl1_p4_lstm_w1_size1'
 
 
 # 固定随机数种子
@@ -272,6 +272,7 @@ def test_dgl(model, X, Y, FT, essay_len, device='cpu', batch_n=1, title=False, e
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='English Discourse', usage='newtrain_en.py [<args>] [-h | --help]')
+    parser.add_argument('--model_name', default='wsj', type=str, help='set model name')
     parser.add_argument('--seed_num', default=1, type=int, help='set seed num.')
     parser.add_argument('--epoch', default=1500, type=int, help='set epoch num')
     parser.add_argument('--learning_rate', default=0.1, type=float, help='set learning rate')
@@ -282,13 +283,14 @@ if __name__ == "__main__":
     # 1:余弦相似度，2:Pearson相似度，3:欧氏距离，4:kendall系数，
     parser.add_argument('--add_self_loop', default=0, type=int, help='whether to add self-loop in dgl')
     # 默认不添加self-loop(是否额外添加自环)
-    parser.add_argument('--dgl_layer', default=3, type=int, help='set the number of dgl layers')
+    parser.add_argument('--dgl_layer', default=1, type=int, help='set the number of dgl layers')
     parser.add_argument('--window_size', default=1, type=int, help='set the size of dgl sliding window')
 
     args = parser.parse_args()
 
     seed_torch(args.seed_num)
 
+    model_package_name = args.model_name
     gcn_aggregator = args.dgl_type
     gcn_weight_id = args.weight_define
     dgl_layers = args.dgl_layer
@@ -297,7 +299,7 @@ if __name__ == "__main__":
     is_word=False
 
     print('load Bert Tokenizer...')
-    BERT_PATH = '/home/wsj/bert_model/bert-base-uncased'
+    BERT_PATH = './bert/bert-base-uncased'
     tokenizer = BertTokenizer.from_pretrained(BERT_PATH)
 
     title = True
