@@ -1,0 +1,219 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import dgl
+import dgl.nn.pytorch as dgltor
+import numpy as np
+import pandas as pd
+
+from subLayer import *
+
+
+class EnSTWithRSbySPPWithFt2_GRU_DGL_Bottom_Sliding_Window(nn.Module):
+    def __init__(self, word_dim, hidden_dim, sent_dim, class_n, p_embd=None, pos_dim=0, p_embd_dim=16, ft_size=0,
+                 pool_type='max_pool', dgl_layer=1, gcn_aggr='gcn', weight_id=1, loop=0, window_size=1):
+        # p_embd: 'cat', 'add','embd', 'embd_a'
+        super(EnSTWithRSbySPPWithFt2_GRU_DGL_Bottom_Sliding_Window, self).__init__()
+        self.word_dim = word_dim
+        self.hidden_dim = hidden_dim
+        self.sent_dim = sent_dim
+        self.class_n = class_n
+        self.p_embd = p_embd
+        self.p_embd_dim = p_embd_dim
+        self.ft_size = ft_size
+        self.pool_type = pool_type
+        self.window_size = window_size
+
+        # self.dropout = nn.Dropout(0.1)
+        self.sentLayer = nn.GRU(self.word_dim, self.hidden_dim, bidirectional=True)
+
+        self.classifier = nn.Linear(self.sent_dim * 2 + 30, self.class_n)
+
+        self.posLayer = PositionLayer(p_embd, p_embd_dim)
+        self.sfLayer = InterSentenceSPPLayer(self.hidden_dim * 2, pool_type=self.pool_type)
+        self.rfLayer = InterSentenceSPPLayer(self.hidden_dim * 2, pool_type=self.pool_type)
+
+        if p_embd == 'embd':
+            self.tagLayer = nn.GRU(self.hidden_dim * 2 + p_embd_dim * 3 + ft_size, self.sent_dim, bidirectional=True)
+        elif p_embd == 'cat':
+            self.tagLayer = nn.GRU(self.hidden_dim * 2 + 3 + ft_size, self.sent_dim, bidirectional=True)
+        else:
+            self.tagLayer = nn.GRU(self.hidden_dim * 2 + ft_size, self.sent_dim, bidirectional=True)
+
+        self.edge_weight_id = weight_id
+        self.gcn_loop = loop
+
+        # 是否添加norm，后续需要进行尝试:'right'或者'none',default='both'
+        # gcn 聚合可以理解为周围所有的邻居结合和当前节点的均值
+        self.SAGE_GCN = nn.ModuleList(
+            [dgltor.SAGEConv(self.sent_dim * 2, self.sent_dim * 2, aggregator_type=gcn_aggr, feat_drop=0.1, bias=True, activation=nn.ReLU())
+             for _ in range(dgl_layer)])
+
+        self.transition_layer = nn.Sequential(
+            nn.Linear(self.sent_dim * 2 * (dgl_layer + 1), self.sent_dim * 2),
+            nn.ReLU(),
+            nn.Dropout(0.1)
+        )
+
+
+    def init_hidden(self, batch_n, doc_l, device='cpu'):
+        # h0: [num_layers * num_directions, batch, hidden_size]
+        self.sent_hidden = torch.rand(2, batch_n * doc_l, self.hidden_dim, device=device).uniform_(-0.01, 0.01)
+        self.tag_hidden = torch.rand(2, batch_n, self.sent_dim, device=device).uniform_(-0.01, 0.01)
+
+
+    #  sentence_encoding:(doc_l, sent_dim*2)，actual_length:实际节点个数
+    def build_graph(self, sentence_encoding, actual_length, device='cpu'):
+
+        nodes_num = actual_length
+        # 保存每对边的连接
+        edges = []
+        # 保存边的节点权重
+        edges_weight = []
+
+        # 使用联通子图
+        for i in range(nodes_num):
+            for j in range(max(0, i-self.window_size), min(nodes_num, i+self.window_size+1)):
+                # 构建双向图(自循环已经考虑进去了)
+                edges.append((i, j))
+                weight = 0
+
+                # 计算余弦相似度
+                if self.edge_weight_id == 1:
+                    weight = torch.cosine_similarity(sentence_encoding[i], sentence_encoding[j], dim=0)
+                    edges_weight.append(weight)
+                # Pearson相似度
+                elif self.edge_weight_id == 2:
+                    pearson = np.corrcoef(sentence_encoding[i].cpu().detach().numpy(), sentence_encoding[j].cpu().detach().numpy())[0][1]
+                    weight = torch.tensor(pearson, dtype=torch.float).to(device)
+                    edges_weight.append(weight)
+                # 欧氏距离，1/分母作为权重
+                elif self.edge_weight_id == 3:
+                    distance = torch.pairwise_distance(sentence_encoding[i][None, :], sentence_encoding[j][None, :])
+                    weight = 1 / (1 + distance[0])
+                    edges_weight.append(weight)
+                # kendall系数
+                elif self.edge_weight_id == 4:
+                    kendall = pd.Series(sentence_encoding[i].cpu().detach().numpy()).corr(
+                        pd.Series(sentence_encoding[j].cpu().detach().numpy()), method="kendall")
+                    weight = torch.tensor(kendall, dtype=torch.float).to(device)
+                    edges_weight.append(weight)
+                else:
+                    print("wrong egde weight id")
+
+                # whether to add another self-loop，这条边有ferature(1.)
+                if self.gcn_loop:
+                    if i == j:
+                        edges.append((i, j))
+                        edges_weight.append(weight)
+
+        # 必须要先张量化
+        edges = torch.tensor(edges)
+        # 若超出实际长度则产生孤立节点
+        graph = dgl.graph((edges[:, 0], edges[:, 1]), num_nodes=len(sentence_encoding)).to(device)
+
+        # whether to add another self-loop，此时edges的feature为0
+        # graph = dgl.add_self_loop(graph)
+
+        edges_weight = torch.tensor(edges_weight).to(device)
+        return graph, edges_weight
+
+
+    # inputs:(30,25,40,768)
+    # tp:(30,25,6)  前六个基础特征
+    # tft:(30,25,9)  后九个新增的特征
+    def forward(self, documents, pos, ft, length_essay=None, device='cpu', mask=None):
+        # 保证数据的有效性
+        ft = ft[:, :, :self.ft_size]   # ft:(batch_n,doc_l,9)
+        batch_n, doc_l, sen_l, _ = documents.size()  # documents: (batch_n, doc_l, sen_l, word_dim)
+        self.init_hidden(batch_n=batch_n, doc_l=doc_l, device=device)
+        documents = documents.view(batch_n * doc_l, sen_l, -1).transpose(0,
+                                                                         1)  # documents: (sen_l, batch_n*doc_l, word_dim)
+
+        sent_out, _ = self.sentLayer(documents, self.sent_hidden)  # sent_out: (sen_l, batch_n*doc_l, hidden_dim*2)
+        # sent_out = self.dropout(sent_out)
+
+        if mask is None:
+            sentpres = torch.tanh(torch.mean(sent_out, dim=0))  # sentpres: (batch_n*doc_l, hidden_dim*2)
+        else:
+            sent_out = sent_out.masked_fill(mask.transpose(1, 0).unsqueeze(-1).expand_as(sent_out), 0)
+            sentpres = torch.tanh(torch.sum(sent_out, dim=0) / (sen_l - mask.sum(dim=1).float() + 1e-9).unsqueeze(-1))
+
+        sentpres = sentpres.view(batch_n, doc_l, self.hidden_dim * 2)  # sentpres: (batch_n, doc_l, hidden_dim*2)
+
+
+        # ---------------------------------------------------------------------
+
+        # 加入GCN
+        # length_essay
+        # tensor([30, 30, 30, 30, 30, 30, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31,
+        #         31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31,
+        #         31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31],
+        #        device='cuda:0')
+
+        # 存储每篇文章经过dgl之后的feature
+        total_sentence_feature = []
+
+        for i in range(len(length_essay)):
+            inner_sentennce = sentpres[i]
+            node_length = length_essay[i]
+            # build graph
+            graph, edge_weight = self.build_graph(inner_sentennce, node_length, device=device)
+
+            current_essay_sentence = [inner_sentennce]
+            # try add different GCN，句间交互
+            for sage_gcn in self.SAGE_GCN:
+                # 输出：(node_nums, self.hidden_dim * 2)
+                inner_sentennce = sage_gcn(graph, inner_sentennce, edge_weight)
+                current_essay_sentence.append(inner_sentennce)
+            # 每篇文章的
+            current_essay_sentence = torch.cat(current_essay_sentence, dim=-1)  # current_essay_sentence:(node_nums, self.hidden_dim * 2 * dgl_layer)
+            # 统一一下维度
+            current_essay_sentence = self.transition_layer(current_essay_sentence)  # current_essay_sentence:(node_nums, self.hidden_dim * 2)
+            # 加入总体中
+            total_sentence_feature.append(current_essay_sentence)
+
+        # 一个batch下的所有文章
+        dgl_out = torch.stack(total_sentence_feature, dim=0)  # total_sentence_feature:(batch_size, node_nums, self.hidden_dim * 2)
+
+        # ----------------------------------------------------------------------
+
+
+        sentFt = self.sfLayer(dgl_out)  # sentFt:(batch_n, doc_l,15)
+
+        # 添加SPE
+        sentpres = self.posLayer(dgl_out, pos)  # sentpres:(batch_n, doc_l, hidden_dim*2)
+        # 添加特征feature进去
+        sentpres = torch.cat((sentpres, ft), dim=2)  # sentpres:(batch_n, doc_l, hidden_dim*2+ft_size)
+
+        sentpres = sentpres.transpose(0, 1)
+
+        tag_out, _ = self.tagLayer(sentpres, self.tag_hidden)  # tag_out: (doc_l, batch_n, sent_dim*2)
+
+
+        tag_out = torch.tanh(tag_out)
+
+        tag_out = tag_out.transpose(0, 1)
+        roleFt = self.rfLayer(tag_out)
+
+        tag_out = torch.cat((tag_out, sentFt, roleFt), dim=2)
+
+        result = self.classifier(tag_out)
+
+        result = F.log_softmax(result, dim=2)  # result: (batch_n, doc_l, class_n)
+        return result
+
+    def getModelName(self):
+        name = 'dgl_sent_gru_%s_ft_%d' % (self.pool_type[0], self.ft_size)
+        name += '_' + str(self.hidden_dim) + '_' + str(self.sent_dim) + '_' + str(self.ft_size)
+        if self.p_embd == 'cat':
+            name += '_cp'
+        elif self.p_embd == 'add':
+            name += '_ap'
+        elif self.p_embd == 'embd':
+            name += '_em'
+        elif self.p_embd == 'embd_a':
+            name += '_em_a'
+        elif self.p_embd:
+            name += '_' + self.p_embd
+        return name

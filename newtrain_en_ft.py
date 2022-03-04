@@ -5,7 +5,8 @@ from transformers import BertTokenizer
 # import config
 from model import *
 from model_gru import *
-import utils_e as utils
+from model_dgl_enft import *
+import utils_e
 
 import numpy as np
 
@@ -16,6 +17,8 @@ import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import tqdm
+from tqdm import *
 
 import matplotlib.pyplot as plt
 
@@ -23,18 +26,16 @@ plt.switch_backend('Agg')
 
 currenttime = time.localtime()
 
-model_package_name = 'new_baseline0.77_gate2'
+# model_package_name = 'wsj'
 
 
-def list2tensor(x, y, ft, p_embd, device='cpu'):
-    # print([len(j) for i in x[:3] for j in i])
+def list2tensor_dgl(x, y, ft, e_len, p_embd, device='cpu'):
     inputs = torch.tensor(x, dtype=torch.long, device=device)
     labels = torch.tensor(y, dtype=torch.long, device=device)
-
     tp = torch.tensor(ft, dtype=torch.float, device=device)[:, :, :6]
-
     tft = torch.tensor(ft, dtype=torch.float, device=device)[:, :, 6:]
-    return inputs, labels, tp, tft
+    e_len = torch.tensor(e_len, dtype=torch.long, device=device)
+    return inputs, labels, tp, tft, e_len
 
 # 固定随机数种子
 def seed_torch(seed=1):
@@ -47,16 +48,20 @@ def seed_torch(seed=1):
     torch.backends.cudnn.deterministic = True
 
 
-def train(model, X, Y, FT, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=False, embeddings=None):
+def train(model, X, Y, FT, essay_len, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=False, embeddings=None):
 
     modelName = 'e_' + model.getModelName()
 
     if title:
         modelName += '_t'
 
-    writer = SummaryWriter('./newlog/enft/' + model_package_name + '/en_ft_' + modelName + '_' + time.strftime('%m-%d_%H.%M', currenttime))
+    writer = SummaryWriter(
+        './newlog/enft/dgl/' + model_package_name + '/en_ft_' + modelName + '_' + time.strftime(
+        '%m-%d_%H.%M', currenttime) + '_seed_' + str(args.seed_num))
 
-    X_train, Y_train, ft_train, X_test, Y_test, ft_test = utils.dataSplit(X, Y, FT, 0.2)
+    # 20%的数据作为验证集
+    X_train, Y_train, ft_train, essay_len_train, X_test, Y_test, ft_test, essay_len_test = utils.dataSplit_dgl(X, Y, FT,
+                                                                                                        essay_len, 0.2)
 
     if (is_gpu):
         model.cuda()
@@ -80,26 +85,29 @@ def train(model, X, Y, FT, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=
     c = 0
     best_epoch = -1
 
-    last_acc, _ = test(model, X_test, Y_test, ft_test, device, title=title, embeddings=embeddings)
+    last_acc, _, _ = test_dgl(model, X_test, Y_test, ft_test, essay_len_test, device, title=title,
+                              embeddings=embeddings)
     # acc_list.append(last_acc)
     # last_acc = max(0.6, last_acc)
 
-    for epoch in range(epoch_n):
+    for epoch in tqdm(range(epoch_n)):
         total_loss = 0
-        gen = utils.batchGeneratorId(X_train, Y_train, ft_train, batch_n, is_random=True)
+        gen = utils_e.batchGeneratorId_dgl(X_train, Y_train, ft_train, essay_length=essay_len_train, batch_n=batch_n, is_random=True)
         i = 0
 
-        for x, y, ft in gen:
+        model.train()
+        for x, y, ft, e_len in gen:
+
             optimizer.zero_grad()
 
-            inputs, labels, tp, tft = list2tensor(x, y, ft, model.p_embd, device)
+            inputs, labels, tp, tft, e_length = list2tensor_dgl(x, y, ft, e_len, model.p_embd, device)
             inputs = embeddings(inputs)
 
             if title:
-                result = model(inputs, tp, tft, device=device)[:, 1:].contiguous()
+                result = model(inputs, tp, tft, length_essay=e_length, device=device)[:, 1:].contiguous()
                 labels = labels[:, 1:].contiguous()
             else:
-                result = model(inputs, tp, tft, device=device)
+                result = model(inputs, tp, tft, length_essay=e_length, device=device)
 
             r_n = labels.size()[0] * labels.size()[1]
             result = result.contiguous().view(r_n, -1)
@@ -115,10 +123,12 @@ def train(model, X, Y, FT, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=
         loss_list.append(aver_loss)
 
         # if epoch % 10 == 0:
-        accuracy, _ = test(model, X_test, Y_test, ft_test, device, title=title, embeddings=embeddings)
+        accuracy, dev_aver_loss, _ = test_dgl(model, X_test, Y_test, ft_test, essay_len_test, device, title=title,
+                                              embeddings=embeddings)
         acc_list.append(accuracy)
 
         writer.add_scalar("en_feature_loss/train", aver_loss, epoch)
+        writer.add_scalar("en_feature_loss/dev", dev_aver_loss, epoch)
         writer.add_scalar("en_feature_performance/accuracy", accuracy, epoch)
 
         if last_acc < accuracy:
@@ -146,10 +156,13 @@ def train(model, X, Y, FT, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=
         if (lr < 0.0001):
             break
 
-    # top模型文件添加epoch记录
-    oldname = model_dir + '%s_top.pk' % modelName
-    newname = model_dir + '%s_epoch_%d_top.pk' % (modelName, best_epoch)
-    os.rename(oldname, newname)
+    if best_epoch == -1:
+        pass
+    else:
+        # top模型文件添加epoch记录
+        oldname = model_dir + '%s_top.pk' % modelName
+        newname = model_dir + '%s_epoch_%d_top.pk' % (modelName, best_epoch)
+        os.rename(oldname, newname)
 
     writer.close()
 
@@ -162,28 +175,41 @@ def train(model, X, Y, FT, is_gpu=False, epoch_n=10, lr=0.1, batch_n=100, title=
     # plt.show()
 
 
-def test(model, X, Y, FT, device='cpu', batch_n=1, title=False, embeddings=None):
+def test_dgl(model, X, Y, FT, essay_len, device='cpu', batch_n=1, title=False, embeddings=None):
+
+    loss_function = nn.NLLLoss()
     result_list = []
     label_list = []
-    with torch.no_grad():
-        gen = utils.batchGeneratorId(X, Y, FT, batch_n)
-        for x, y, ft in gen:
+    # model.eval()的作用是不启用Batch Normalization和Dropout
+    model.eval()
+    total_loss = 0
+    i = 0
 
-            inputs, labels, tp, tft = list2tensor(x, y, ft, model.p_embd, device)
+    with torch.no_grad():
+        gen = utils_e.batchGeneratorId_dgl(X, Y, FT, essay_len, batch_n)
+        for x, y, ft, e_len in gen:
+
+            inputs, labels, tp, tft, e_length = list2tensor_dgl(x, y, ft, e_len, model.p_embd, device)
             inputs = embeddings(inputs)
 
             if title:
-                result = model(inputs, tp, tft, device=device)[:, 1:].contiguous()
+                result = model(inputs, tp, tft, length_essay=e_length, device=device)[:, 1:].contiguous()
                 labels = labels[:, 1:].contiguous()
             else:
-                result = model(inputs, tp, tft, device=device)
+                result = model(inputs, tp, tft, length_essay=e_length, device=device)
 
             r_n = labels.size()[0] * labels.size()[1]
             result = result.contiguous().view(r_n, -1)
             labels = labels.view(r_n)
 
+            loss = loss_function(result, labels)
+            total_loss += loss.cpu().detach().numpy()
+            i += 1
+
             result_list.append(result)
             label_list.append(labels)
+
+    aver_loss = total_loss / i
 
     preds = torch.cat(result_list)
     labels = torch.cat(label_list)
@@ -202,37 +228,64 @@ def test(model, X, Y, FT, device='cpu', batch_n=1, title=False, embeddings=None)
                 t_c += 1
     accuracy = t_c / l
 
-    return accuracy, a
+    return accuracy, aver_loss, a
 
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='English Discourse', usage='newtrain_en_ft.py [<args>] [-h | --help]')
+    parser.add_argument('--model_name', default='wsj', type=str, help='set model name')
     parser.add_argument('--seed_num', default=1, type=int, help='Set seed num.')
+    parser.add_argument('--epoch', default=1500, type=int, help='set epoch num')
+    parser.add_argument('--learning_rate', default=0.1, type=float, help='set learning rate')
+    parser.add_argument('--dgl_type', default='lstm', type=str, help='set aggregator type of SAGEConv')
+    # 'gcn','lstm','pool','mean'
+    parser.add_argument('--weight_define', default=1, type=int, help='set how to define weight between nodes'
+                                                                     ' in SAGEConv')
+    # 1:余弦相似度，2:Pearson相似度，3:欧氏距离，4:kendall系数，
+    parser.add_argument('--add_self_loop', default=0, type=int, help='whether to add self-loop in dgl')
+    # 默认不添加self-loop(是否额外添加自环)
+    parser.add_argument('--dgl_layer', default=1, type=int, help='set the number of dgl layers')
+    parser.add_argument('--window_size', default=1, type=int, help='set the size of dgl sliding window')
+
     args = parser.parse_args()
 
     seed_torch(args.seed_num)
+
+    model_package_name = args.model_name
+    gcn_aggregator = args.dgl_type
+    gcn_weight_id = args.weight_define
+    dgl_layers = args.dgl_layer
 
     in_file = './data/En_train.json'
     is_word = False
     class_n = 5
 
     print('load Bert Tokenizer...')
-    BERT_PATH = '/home/wsj/bert_model/bert-base-uncased'
+    BERT_PATH = './bert/bert-base-uncased'
     tokenizer = BertTokenizer.from_pretrained(BERT_PATH)
 
     title = True
     max_len = 40
 
-    en_documents, en_labels, features = utils.getEnglishSamplesBertId(in_file, tokenizer, title=title, is_word=is_word)
+    en_documents, en_labels, features = utils_e.getEnglishSamplesBertId(in_file, tokenizer, title=title, is_word=is_word)
 
-    pad_documents, pad_labels = utils.sentencePaddingId(en_documents, en_labels, max_len)
+    pad_documents, pad_labels, essay_length = utils_e.sentencePaddingId_dgl(en_documents, en_labels, max_len)
+
+
+    # for i in range(len(essay_length)):
+    #     if isinstance(essay_length[i], int):
+    #         pass
+    #     else:
+    #         print("wrong")
+    # print("correct")
+
 
     # 处理新增的手工特征
-    n_features = utils.featuresExtend(features, en_documents, en_labels, tokenizer)
+    n_features = utils_e.featuresExtend(features, en_documents, en_labels, tokenizer)
     ft_size = len(n_features[0][0]) - 7
 
-    batch_n = 30
+    batch_num = 30
 
     is_gpu = True
     if is_gpu and torch.cuda.is_available():
@@ -253,27 +306,37 @@ if __name__ == "__main__":
     # embeddings.weight.requires_grad = True
 
     # tag_model = torch.load('./model/STE_model_128_128_last.pk')
-    tag_model = STWithRSbySPPWithFt2_GRU(embeddings.embedding_dim, hidden_dim, sent_dim, class_n, p_embd=p_embd,
-                                     p_embd_dim=p_embd_dim, ft_size=ft_size)
+    # 分类器依然是五分类器
+    tag_model = EnSTWithRSbySPPWithFt2_GRU_DGL_Bottom_Sliding_Window(embeddings.embedding_dim, hidden_dim, sent_dim,
+                                                                     class_n,
+                                                                     p_embd=p_embd,
+                                                                     p_embd_dim=p_embd_dim,
+                                                                     ft_size=ft_size,
+                                                                     pool_type='max_pool',
+                                                                     dgl_layer=dgl_layers,
+                                                                     gcn_aggr=gcn_aggregator,
+                                                                     weight_id=gcn_weight_id,
+                                                                     loop=args.add_self_loop,
+                                                                     window_size=args.window_size)
 
     # 创建三个文件名
-    if not os.path.exists('./newlog/enft/' + model_package_name):
-        os.mkdir('./newlog/enft/' + model_package_name)
-    if not os.path.exists('./newmodel/enft/' + model_package_name):
-        os.mkdir('./newmodel/enft/' + model_package_name)
-    if not os.path.exists('./newvalue/enft/' + model_package_name):
-        os.mkdir('./newvalue/enft/' + model_package_name)
+    if not os.path.exists('./newlog/enft/dgl/' + model_package_name):
+        os.mkdir('./newlog/enft/dgl/' + model_package_name)
+    if not os.path.exists('./newmodel/enft/dgl/' + model_package_name):
+        os.mkdir('./newmodel/enft/dgl/' + model_package_name)
+    if not os.path.exists('./newvalue/enft/dgl/' + model_package_name):
+        os.mkdir('./newvalue/enft/dgl/' + model_package_name)
 
 
-    model_dir = './newmodel/enft/' + model_package_name + '/' + tag_model.getModelName() + '-' + time.strftime('%m-%d_%H.%M', currenttime) + '_seed_' + str(args.seed_num) + '/'
+    model_dir = './newmodel/enft/dgl/' + model_package_name + '/' + tag_model.getModelName() + '-' + time.strftime(
+        '%m-%d_%H.%M', currenttime) + '_seed_' + str(args.seed_num) + '/'
     if not os.path.isdir(model_dir):
         os.mkdir(model_dir)
 
-
     print("start English with feature model training")
     starttime = datetime.datetime.now()
-    train(tag_model, pad_documents, pad_labels, n_features, is_gpu, epoch_n=1500, lr=0.1, batch_n=batch_n, title=title,
-          embeddings=embeddings)
+    train(tag_model, pad_documents, pad_labels, n_features, essay_length, is_gpu, epoch_n=args.epoch,
+          lr=args.learning_rate, batch_n=batch_num, title=title, embeddings=embeddings)
     endtime = datetime.datetime.now()
     print("本次seed为%d的训练耗时：" % int(args.seed_num))
     print(endtime - starttime)

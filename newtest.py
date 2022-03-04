@@ -395,7 +395,7 @@ def new_English_test(model_base_dir, seed, type_id):
 
 
 def English_test_ft(model_dir, seed):
-    import utils_e as utils
+    import utils_e
     from transformers import BertTokenizer
     in_file = './data/En_test.json'
     title = True
@@ -407,16 +407,17 @@ def English_test_ft(model_dir, seed):
     BERT_PATH = './bert/bert-base-uncased'
     tokenizer = BertTokenizer.from_pretrained(BERT_PATH)
 
-    en_documents, en_labels, features = utils.getEnglishSamplesBertId(in_file, tokenizer, title=title, is_word=is_word)
-    pad_documents, pad_labels = utils.sentencePaddingId(en_documents, en_labels, max_len)
+    en_documents, en_labels, features = utils_e.getEnglishSamplesBertId(in_file, tokenizer, title=title, is_word=is_word)
+    pad_documents, pad_labels, essay_length = utils_e.sentencePaddingId(en_documents, en_labels, max_len)
 
     n_features = utils.featuresExtend(features, en_documents, en_labels, tokenizer)
     print(len(n_features[0][0]))
 
-    from newtrain_en_ft import test
-    w_file = './newvalue/enft/' + model_package + '/%s_seed_%d.csv' % (in_file.split('.')[1].split('/')[-1], seed)
+    from newtrain_en_ft import test_dgl
+    w_file = './newvalue/enft/dgl/' + model_package + '/%s_seed_%d.csv' % (in_file.split('.')[1].split('/')[-1], seed)
 
-    temp_accurancy, temp_macro_f1 = test_all_e(test, model_dir, w_file, (pad_documents, pad_labels, n_features), title, embeddings=embeddings)
+    temp_accurancy, temp_macro_f1 = test_all_e(test_dgl, model_dir, w_file, (pad_documents, pad_labels, n_features,
+                                                                        essay_length), title, embeddings=embeddings)
     return temp_accurancy, temp_macro_f1
 
 def new_English_feature_test(model_base_dir, seed):
@@ -439,7 +440,7 @@ def new_English_feature_test(model_base_dir, seed):
         macro_f1_list.append(temp_seed_macro_f1)
         i = i + 1
 
-    summary_file = './newvalue/enft/' + model_package + '/seed_summary.csv'
+    summary_file = './newvalue/enft/dgl/' + model_package + '/seed_summary.csv'
 
     j = 0
     with open(summary_file, 'w', encoding='utf-8') as wf:
@@ -460,7 +461,7 @@ def new_English_feature_test(model_base_dir, seed):
 
 if __name__ == "__main__":
     # 调用这个目录下的所有模型进行test
-    # 0是中文，1是英文，2是英文+feature，3是中文+dgl，4是英文+dgl
+    # 0是中文，1是英文，2是英文+feature，3是中文+dgl，4是英文+dgl，5是英文+hand_feature+dgl
 
     parser = argparse.ArgumentParser(description='Test Discourse', usage='newtest.py [<args>] [-h | --help]')
     parser.add_argument('--type_id', default=4, type=int, help='Set seed num.')
@@ -503,6 +504,12 @@ if __name__ == "__main__":
         model_base_dir = './newmodel/en/dgl/' + model_package + '/'
         list_seed = list_seed[args.seed_start:args.seed_end]
         new_English_test(model_base_dir, list_seed, test_type_id)
+
+    elif test_type_id == 5:
+
+        model_base_dir = './newmodel/enft/' + model_package + '/'
+        list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+        new_English_feature_test(model_base_dir, list_seed)
 
 
     # model_dir = './model/roles/st_rs_sppm_128_128_ap_211106182840/'
