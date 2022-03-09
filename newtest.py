@@ -408,9 +408,9 @@ def English_test_ft(model_dir, seed):
     tokenizer = BertTokenizer.from_pretrained(BERT_PATH)
 
     en_documents, en_labels, features = utils_e.getEnglishSamplesBertId(in_file, tokenizer, title=title, is_word=is_word)
-    pad_documents, pad_labels, essay_length = utils_e.sentencePaddingId(en_documents, en_labels, max_len)
+    pad_documents, pad_labels, essay_length = utils_e.sentencePaddingId_dgl(en_documents, en_labels, max_len)
 
-    n_features = utils.featuresExtend(features, en_documents, en_labels, tokenizer)
+    n_features = utils_e.featuresExtend(features, en_documents, en_labels, tokenizer)
     print(len(n_features[0][0]))
 
     from newtrain_en_ft import test_dgl
@@ -507,7 +507,7 @@ if __name__ == "__main__":
 
     elif test_type_id == 5:
 
-        model_base_dir = './newmodel/enft/' + model_package + '/'
+        model_base_dir = './newmodel/enft/dgl/' + model_package + '/'
         list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
         new_English_feature_test(model_base_dir, list_seed)
 

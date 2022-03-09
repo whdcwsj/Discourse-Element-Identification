@@ -90,6 +90,14 @@ class OriginalBertClassification(nn.Module):
         # documents的可能需要先放在CPU上加载
         temp_batch_output = []
         for i in range(documents.shape[0]):
+            # step 1: obtain sequence encoding by BertModel
+            # bert的输出：last_hidden_state, pooler_output, all_hidden_states, all_attentions
+            # 1、last_hidden_state：shape是(batch_size, sequence_length, hidden_size)，hidden_size=768，它是模型最后一层输出的隐藏状态
+            # 2、pooler_output：shape是(batch_size, hidden_size)，这是序列的第一个token(classification token)的最后一层的隐藏状态；代表该句句子向量【CLS】
+            # 3、hidden_states：输出可选项，如果输出，需要指定config.output_hidden_states=True
+            # 它也是一个元组，它的第一个元素是embedding，其余元素是各层的输出，每个元素的形状是(batch_size, sequence_length, hidden_size)
+            # 4、attentions：输出可选项，如果输出，需要指定config.output_attentions=True
+            # 它也是一个元组，它的元素是每一层的注意力权重，用于计算self-attention heads的加权平均值
             embedding = self.bert(documents[i])
             last_hidden_state = embedding[0]
             last_hidden_state = last_hidden_state.to(self.config.device)
