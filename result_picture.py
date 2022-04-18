@@ -38,14 +38,14 @@ x = x - (total_width - width) / 2
 # for i in range(1, 4):
 #     plt.axhline(y=i, linestyle='--', linewidth=1.5)
 
-rgbcolor=[(0/255, 168/255, 225/255),
-          (224/255, 211/255, 22/255),
-          (224/255, 57/255, 11/255)]
+# rgbcolor=[(0/255, 168/255, 225/255),
+#           (224/255, 211/255, 22/255),
+#           (224/255, 57/255, 11/255)]
 
 # 画柱状图
-plt.bar(x + 1 * width, Bert_DCR, width=width, label='Bert-DCR', color=rgbcolor[1])
-plt.bar(x + 2 * width, DiSA, width=width, label='DiSA', color=rgbcolor[0])
-plt.bar(x + 3 * width, DCRGNN, width=width, label='DCRGNN', color=rgbcolor[2])
+plt.bar(x + 1 * width, Bert_DCR, width=width, label='Bert-DCR', hatch="-/-\-/", color='gainsboro', edgecolor='black')
+plt.bar(x + 2 * width, DiSA, width=width, label='DiSA', hatch="**", color='gainsboro', edgecolor='black')
+plt.bar(x + 3 * width, DCRGNN, width=width, label='DCRGNN', hatch="//", color='white', edgecolor='black')
 
 
 
@@ -64,4 +64,4 @@ plt.ylabel('Macro-F1', fontsize=12, labelpad=15)
 # 设置图例位置，中上
 plt.legend(loc='upper center')
 # plt.show()
-plt.savefig("./picture/chinese_compare.png", format="png", dpi=1000)
+plt.savefig("./picture/chinese_compare2.png", format="png", dpi=1000)

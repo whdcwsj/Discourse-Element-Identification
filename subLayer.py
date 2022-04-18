@@ -13,12 +13,13 @@ import copy
 # transformer中的Positional Embedding位置编码
 # 对于每个位置的PE是固定的，不会因为输入的句子不同而不同，且每个位置的PE大小为1∗n(n为word embedding的dim_size)
 # transformer中使用正余弦波来计算PE
+# d_model: 词嵌入维度，max_len: 每个句子的最大长度
 
 # if p_embd in ['embd_b', 'embd_c']:
 #     p_embd_dim = hidden_dim * 2 =128
 
 class PositionalEncoding(nn.Module):
-    # p_embd_dim=128, 100
+    # p_embd_dim=16, 100
     def __init__(self, d_model, max_len=5000):
         super(PositionalEncoding, self).__init__()
         
@@ -35,6 +36,8 @@ class PositionalEncoding(nn.Module):
         # 模型中需要保存下来的参数包括两种:
         # 一种是反向传播需要被optimizer更新的，称之为parameter
         # 一种是反向传播不需要被optimizer更新，称之为buffer
+        # buffer我们把它认为是对模型效果有帮助的，但是却不是模型结构中超参数或者参数，不需要随着优化步骤进行更新的增益对象.
+        # 注册之后我们就可以在模型保存后重加载时和模型结构与参数一同被加载.
         self.register_buffer('pe', pe)
 
     # (batch_n,doc_l,3)
