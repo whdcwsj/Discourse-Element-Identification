@@ -229,8 +229,8 @@ def featuresExtend(features, en_documents, en_labels, tokenizer):
             ft.append(fd_c)
             # number of following components  后面的组件数
             ft.append(bd_c)
-            # 原本是not in，改成in
-            if en_labels[i][j] in [0, 4]:
+            # 就是not in，尴尬，改错了
+            if en_labels[i][j] not in [0, 4]:
                 fd_c += 1
                 bd_c -= 1
 
