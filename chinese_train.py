@@ -295,6 +295,69 @@ def test_dgl(model, X, Y, FT, essay_len, device='cpu', batch_n=1, title=False, i
     return accuracy, aver_loss, a
 
 
+def picture_test_dgl(model, X, Y, FT, essay_len, device='cpu', batch_n=1, title=False, is_mask=False):
+    loss_function = nn.NLLLoss()
+    result_list = []
+    label_list = []
+    sentence_feature_list = []
+    model.eval()
+    total_loss = 0
+    i = 0
+    with torch.no_grad():
+        # 返回：b_docs, b_labs, b_ft
+        # 有一定排序的，先短后长
+        gen = utils.batchGenerator_dgl(X, Y, FT, essay_len, batch_n)
+        for x, y, ft, e_len in gen:
+
+            inputs, labels, tp, e_length = list2tensor_dgl(x, y, ft, e_len, model.p_embd, device)
+
+            if is_mask:
+                mask = getMask(ft, device)
+            else:
+                mask = None
+
+            if title:
+                temp_result, pre_pred = model(inputs, pos=tp, length_essay=e_length, device=device, mask=mask)
+                result = temp_result[:, 1:].contiguous()  # result: (batch_n, doc_l, class_n)
+                # (1,7)
+                labels = labels[:, 1:].contiguous()  # labels:(batch_n, doc_l-(title))
+            else:
+                result = model(inputs, pos=tp, length_essay=e_length, device=device, mask=mask)
+
+            r_n = labels.size()[0] * labels.size()[1]
+            # view：把原先tensor中的数据按照行优先的顺序排成一个一维的数据，然后按照参数组合成其他维度的tensor。
+            result = result.contiguous().view(r_n, -1)  # result: (doc_l, class_n)  batch_n为1的情况下
+            # label变成一维的
+            labels = labels.view(r_n)
+            pre_pred = pre_pred.squeeze(0)
+            sentence_feature_list.append(pre_pred[1:])
+
+            loss = loss_function(result, labels)
+            total_loss += loss.cpu().detach().numpy()
+            i += 1
+
+            result_list.append(result)
+            label_list.append(labels)
+
+    aver_loss = total_loss / i
+
+    preds = torch.cat(result_list)  # preds:(2866,8)
+    labels = torch.cat(label_list)  # labels:(2866,)
+    t_c = 0
+    # 混淆矩阵
+    a = np.zeros((8, 8))
+    l = preds.size()[0]  # 2866
+    for i in range(l):
+        p = preds[i].cpu().argmax().numpy()
+        r = int(labels[i].cpu().numpy())
+        a[r][p] += 1
+        if p == r:
+            t_c += 1
+    accuracy = t_c / l
+
+    return accuracy, aver_loss, a, sentence_feature_list, label_list
+
+
 # def predict(model, x, ft, device='cpu', title=False):
 #     inputs, _, tp = list2tensor(x, [], ft, model.p_embd, device)
 #

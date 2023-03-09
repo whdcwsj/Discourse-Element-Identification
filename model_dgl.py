@@ -913,7 +913,7 @@ class STWithRSbySPP_DGL_Bottom_Sliding_Window(nn.Module):
 
         # log_softmax 和 nll_loss配套使用
         result = F.log_softmax(result, dim=2)  # result: (batch_n, doc_l, class_n)
-        return result
+        return result, new_out
 
     def getModelName(self):
         # pool_type='max_pool'的第一个字母m
