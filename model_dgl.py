@@ -66,6 +66,7 @@ class STWithRSbySPP_DGL(nn.Module):
         )
 
     # batch_size，一篇文章的句子个数
+    # (sen_l, batch_n * doc_l, word_dim)
     def init_hidden(self, batch_n, doc_l, device='cpu'):
 
         self.sent_hidden = (torch.rand(2, batch_n * doc_l, self.hidden_dim, device=device).uniform_(-0.01, 0.01),

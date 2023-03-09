@@ -508,7 +508,8 @@ if __name__ == "__main__":
     elif test_type_id == 5:
 
         model_base_dir = './newmodel/enft/dgl/' + model_package + '/'
-        list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+        # list_seed = [1, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000]
+        list_seed = list_seed[args.seed_start:args.seed_end]
         new_English_feature_test(model_base_dir, list_seed)
 
 
